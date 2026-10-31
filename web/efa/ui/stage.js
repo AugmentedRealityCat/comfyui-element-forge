@@ -195,9 +195,12 @@ const DRAG_MIN = 4;
 const SMALL = 36;
 function handlePos(b, k) { const [ux, uy] = UNIT[k]; return { x: b.x + (ux + 1) / 2 * b.w, y: b.y + (uy + 1) / 2 * b.h }; }
 const hangSide = (s) => s.settings?.["Emitter side"] || "bottom";
+const hangs = (e) => { const s = styleDef(e.kind, e.style); return s?.placement === "point" && !inWindow(s, e); };
+const framed = (e) => { const s = styleDef(e.kind, e.style); return s?.placement === "window" || (s?.placement === "point" && inWindow(s, e)); };
 function frameHandles(e, b) {
-  const s = st(), off = s?.placement === "point" && e.where.a ? { bottom: "s", top: "n", left: "w", right: "e" }[hangSide(s)] : null;
-  return HANDLES.filter((k) => !(off && k.includes(off)) && (k.length === 2 || (UNIT[k][0] ? b.h : b.w) * view.s >= SMALL));
+  const q = e.where.a && toScreen(e.where.a);
+  return HANDLES.filter((k) => (k.length === 2 || (UNIT[k][0] ? b.h : b.w) * view.s >= SMALL)
+    && !(q && Math.hypot(toScreen(handlePos(b, k)).x - q.x, toScreen(handlePos(b, k)).y - q.y) < HIT));
 }
 function arrowTip(e) {
   const a = e.where.a || { x: clip().width / 2, y: clip().height / 2 };
@@ -340,7 +343,7 @@ function setPoint(cp, which) {
     if (which !== "a" || !fx.box) return;
     const b = fx.box, inside = pt.x > b.x && pt.x < b.x + b.w && pt.y > b.y && pt.y < b.y + b.h;
     if (!old) fx.box = null;
-    else if (styleDef(fx.kind, fx.style)?.placement === "point" || !inside) fx.box = { ...b, x: b.x + pt.x - old.x, y: b.y + pt.y - old.y };
+    else if (hangs(fx) || !inside) fx.box = { ...b, x: b.x + pt.x - old.x, y: b.y + pt.y - old.y };
   }, "point");
   S.setUI({ selected: which });
 }
@@ -437,8 +440,7 @@ function onMove(ev) {
     if (!e) return;
     if (drag.kind === "point") {
       const pt = { x: Math.round(clamp(cp.x, 0, c.width)), y: Math.round(clamp(cp.y, 0, c.height)) };
-      const pl = styleDef(e.kind, e.style).placement;
-      if (drag.which === "a" && drag.box0 && e.box && S.ui.tool === "frame" && pl === "window") {
+      if (drag.which === "a" && drag.box0 && e.box && S.ui.tool === "frame" && framed(e)) {
         const b = e.box;
         pt.x = Math.round(clamp(pt.x, b.x, b.x + b.w)); pt.y = Math.round(clamp(pt.y, b.y, b.y + b.h));
       } else if (drag.which === "a" && drag.box0 && e.box && drag.a0) {
@@ -451,14 +453,15 @@ function onMove(ev) {
       const sn = snapGuides(b.x + mx0 + b.w / 2, b.y + my0 + b.h / 2, ev, [], [], { x0: b.x + mx0, x1: b.x + mx0 + b.w, y0: b.y + my0, y1: b.y + my0 + b.h }, lock);
       let mx = mx0 + sn.dx, my = my0 + sn.dy;
       const a = e.where.a;
-      if (a && styleDef(e.kind, e.style).placement === "window") {
+      if (a && framed(e)) {
         mx = clamp(mx, a.x - b.x - b.w, a.x - b.x); my = clamp(my, a.y - b.y - b.h, a.y - b.y);
       }
       drag.guides = sn.lines;
       e.box = { x: b.x + mx, y: b.y + my, w: b.w, h: b.h };
-      if (styleDef(e.kind, e.style).placement === "point" && drag.a0) e.where.a = { x: Math.round(drag.a0.x + mx), y: Math.round(drag.a0.y + my) };
+      if (hangs(e) && drag.a0) e.where.a = { x: Math.round(drag.a0.x + mx), y: Math.round(drag.a0.y + my) };
     } else if (drag.kind === "size") {
       e.box = holdA(e, resizeBox(e, drag.box0, drag.k, cp, ev.altKey, ev.shiftKey));
+      if (hangs(e) && e.where.a) e.where.a = onHangSide(e, e.box);
     } else if (drag.kind === "paint") {
       const st0 = e.paint[drag.target].at(-1);
       const last = st0.pts.at(-1);
@@ -504,7 +507,7 @@ function cursorFor(hv) {
 let hoverText = "";
 function hoverHint(hv) {
   if (!hv) return "";
-  const point = st()?.placement === "point";
+  const point = !!eff() && hangs(eff());
   if (hv.kind === "size") return point ? "Drag: size · Shift: keep its shape (it stays on its point)" : "Drag: size · Shift: keep its shape · Alt: from the centre";
   if (hv.kind === "box") return S.ui.tool === "point" ? "Drag: move the area · Click: set the point here" : "Drag: move · Shift: one direction · Ctrl: no snapping";
   if (hv.kind === "point") return hv.which === "b" ? "Drag: move point B · Delete removes it" : "Drag: move the point";
@@ -516,11 +519,13 @@ function hoverHint(hv) {
 }
 function resizeBox(e, b, k, cp, centre, keep) {
   const min = 16, s = styleDef(e.kind, e.style), a = e.where.a;
-  const hang = s.placement === "point" && a ? hangSide(s) : null;
+  const hang = hangs(e) && a ? hangSide(s) : null;
   if (s.placement === "ab") centre = true;
   const [hx, hy] = UNIT[k];
-  const pinX = hang === "left" || hang === "right", pinY = hang === "top" || hang === "bottom";
-  const midX = !pinX && (centre || !!hang), midY = !pinY && (centre || !!hang);
+  const across = hang === "left" || hang === "right";
+  const own = (hang === "left" && hx < 0) || (hang === "right" && hx > 0) || (hang === "top" && hy < 0) || (hang === "bottom" && hy > 0);
+  const pinX = across && !own, pinY = !!hang && !across && !own;
+  const midX = !pinX && (centre || (!!hang && !(own && across))), midY = !pinY && (centre || (!!hang && !(own && !across)));
   const cx = hang ? a.x : b.x + b.w / 2, cy = hang ? a.y : b.y + b.h / 2;
   const fx = pinX ? a.x : hx < 0 ? b.x + b.w : b.x, fy = pinY ? a.y : hy < 0 ? b.y + b.h : b.y;
   let w = !hx ? b.w : midX ? 2 * Math.abs(cp.x - cx) : Math.abs(cp.x - fx);
@@ -540,9 +545,14 @@ function resizeBox(e, b, k, cp, centre, keep) {
   };
   return { x: side(!!hx, pinX, midX, cx, fx, cp.x, b.x, w), y: side(!!hy, pinY, midY, cy, fy, cp.y, b.y, hh), w, h: hh };
 }
+function onHangSide(e, b) {
+  const a = e.where.a, side = hangSide(styleDef(e.kind, e.style));
+  if (side === "left" || side === "right") return { x: Math.round(side === "left" ? b.x : b.x + b.w), y: a.y };
+  return { x: a.x, y: Math.round(side === "top" ? b.y : b.y + b.h) };
+}
 function holdA(e, b) {
   const a = e.where.a;
-  if (!b || !a || styleDef(e.kind, e.style)?.placement !== "window") return b;
+  if (!b || !a || !framed(e)) return b;
   const x0 = Math.min(b.x, a.x), y0 = Math.min(b.y, a.y);
   return { x: x0, y: y0, w: Math.max(b.x + b.w, a.x) - x0, h: Math.max(b.y + b.h, a.y) - y0 };
 }
@@ -666,16 +676,16 @@ function nudge(ev) {
       const p = e.where[sel];
       if (!p) return;
       const pt = { x: Math.round(p.x + dx), y: Math.round(p.y + dy) }, pl = styleDef(e.kind, e.style)?.placement, b = e.box;
-      if (sel === "a" && b && pl === "window" && S.ui.tool === "frame") { pt.x = Math.round(clamp(pt.x, b.x, b.x + b.w)); pt.y = Math.round(clamp(pt.y, b.y, b.y + b.h)); }
+      if (sel === "a" && b && framed(e) && S.ui.tool === "frame") { pt.x = Math.round(clamp(pt.x, b.x, b.x + b.w)); pt.y = Math.round(clamp(pt.y, b.y, b.y + b.h)); }
       else if (sel === "a" && b && (pl === "point" || pl === "window")) e.box = { ...b, x: b.x + pt.x - p.x, y: b.y + pt.y - p.y };
       e.where[sel] = pt;
     }
     if (sel === "box" && styleDef(e.kind, e.style)?.placement !== "ab") {
       const b = boxOf(e), a = e.where.a;
       let mx = dx, my = dy;
-      if (b && a && styleDef(e.kind, e.style).placement === "window") { mx = clamp(mx, a.x - b.x - b.w, a.x - b.x); my = clamp(my, a.y - b.y - b.h, a.y - b.y); }
+      if (b && a && framed(e)) { mx = clamp(mx, a.x - b.x - b.w, a.x - b.x); my = clamp(my, a.y - b.y - b.h, a.y - b.y); }
       if (b) e.box = { ...b, x: b.x + mx, y: b.y + my };
-      if (b && styleDef(e.kind, e.style).placement === "point" && e.where.a) e.where.a = { x: Math.round(e.where.a.x + dx), y: Math.round(e.where.a.y + dy) };
+      if (b && hangs(e) && e.where.a) e.where.a = { x: Math.round(e.where.a.x + dx), y: Math.round(e.where.a.y + dy) };
     }
     if (sel === "place") { const p = placeAt(e, now()); setPlace(e, { dx: Math.round(p.dx + dx), dy: Math.round(p.dy + dy) }, now(), fpsOf()); }
     if (sel === "dir") e.dir = Math.round((((e.dir ?? naturalDir(styleDef(e.kind, e.style))) + (dx || dy) * view.s * (ev.shiftKey ? 1.5 : 1)) % 360 + 360) % 360);
@@ -689,7 +699,7 @@ function sizeSelected(f) {
     if (sel === "box") {
       const b = boxOf(e);
       if (!b) return;
-      const a = styleDef(e.kind, e.style).placement === "point" && e.where.a ? e.where.a : { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+      const a = hangs(e) && e.where.a ? e.where.a : { x: b.x + b.w / 2, y: b.y + b.h / 2 };
       f = Math.max(f, 16 / Math.min(b.w, b.h));
       e.box = holdA(e, { x: a.x - (a.x - b.x) * f, y: a.y - (a.y - b.y) * f, w: b.w * f, h: b.h * f });
     }

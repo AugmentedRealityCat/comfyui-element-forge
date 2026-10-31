@@ -70,6 +70,12 @@ export function defaultBox(effect, clip) {
 export function frameBox(effect, clip) {
   const b = effect.box || defaultBox(effect, clip);
   const { a, b: pb } = effect.where;
+  const st = styleDef(effect.kind, effect.style);
+  if (b && effect.box && a && st?.placement === "point" && !inWindow(st, effect)) {
+    const side = st.settings?.["Emitter side"] || "bottom";
+    return { x: side === "left" ? a.x : side === "right" ? a.x - b.w : a.x - b.w / 2,
+      y: side === "top" ? a.y : side === "bottom" ? a.y - b.h : a.y - b.h / 2, w: b.w, h: b.h };
+  }
   if (!b || !effect.box || !a || !pb || styleDef(effect.kind, effect.style)?.placement !== "ab") return b;
   return { x: (a.x + pb.x) / 2 - b.w / 2, y: (a.y + pb.y) / 2 - b.h / 2, w: b.w, h: b.h };
 }
