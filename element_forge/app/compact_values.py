@@ -87,6 +87,12 @@ def in_window(st, effect=None):
     return st.get("placement") == "point" and (uses_guide(st, effect) or bool(s.get("Particles")) or bool(s.get("Follows motion")))
 
 
+def base_point(st, b):
+    side = (st.get("settings") or {}).get("Emitter side") or "bottom"
+    return {"x": b["x"] if side == "left" else b["x"] + b["w"] if side == "right" else b["x"] + b["w"] / 2,
+            "y": b["y"] if side == "top" else b["y"] + b["h"] if side == "bottom" else b["y"] + b["h"] / 2}
+
+
 def default_box(st, effect, clip):
     a = effect["where"].get("a") or {"x": clip["width"] / 2, "y": clip["height"] / 2}
     pl = st.get("placement")
@@ -117,11 +123,7 @@ def default_box(st, effect, clip):
 
 
 def frame_box(st, effect, clip):
-    b = effect.get("box") or default_box(st, effect, clip)
-    a, pb = effect["where"].get("a"), effect["where"].get("b")
-    if not b or not effect.get("box") or not a or not pb or st.get("placement") != "ab":
-        return b
-    return {"x": (a["x"] + pb["x"]) / 2 - b["w"] / 2, "y": (a["y"] + pb["y"]) / 2 - b["h"] / 2, "w": b["w"], "h": b["h"]}
+    return effect.get("box") or default_box(st, effect, clip)
 
 
 def _cap(s):
@@ -250,8 +252,8 @@ def values_for(presets, effect, shot, scale=1.0):
         v["Window A-B automatic"] = False
         v["Window width (plate px)"] = js_round(w["w"])
         v["Window height (plate px)"] = js_round(w["h"])
-        v["Emitter x in window"] = fixed(clamp((a["x"] - w["x"]) / w["w"], 0, 1))
-        v["Emitter y in window"] = fixed(clamp((a["y"] - w["y"]) / w["h"], 0, 1))
+        v["Emitter x in window"] = fixed(clamp((a["x"] - w["x"]) / w["w"], -4, 5))
+        v["Emitter y in window"] = fixed(clamp((a["y"] - w["y"]) / w["h"], -4, 5))
         v["Generate width"], v["Generate height"] = w["gw"], w["gh"]
     elif pl == "ab":
         v["Window A-B automatic"] = True
@@ -268,6 +270,12 @@ def values_for(presets, effect, shot, scale=1.0):
         gw, gh = gen_size(st, bx["w"] / bx["h"], guide, scale)
         v["Generate width"], v["Generate height"] = gw, gh
         v["Size in plate"] = fixed(min(bx["w"] / gw, bx["h"] / gh))
+        p = base_point(st, bx)
+        dx, dy = js_round(p["x"] - a["x"]), js_round(p["y"] - a["y"])
+        if dx:
+            v["Base beside A x (plate px)"] = dx
+        if dy:
+            v["Base beside A y (plate px)"] = dy
     timing = effect.get("timing") or {}
     if timing.get("start"):
         v["Starts at (s)"] = fixed(timing["start"], 2)

@@ -480,6 +480,14 @@
    "330",
    "base"
   ],
+  "Base beside A x (plate px)": [
+   "334",
+   "offset_x"
+  ],
+  "Base beside A y (plate px)": [
+   "334",
+   "offset_y"
+  ],
   "Depth offset (+ = element nearer, less hidden)": [
    "334",
    "depth_offset"

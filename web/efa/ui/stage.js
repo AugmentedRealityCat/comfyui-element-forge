@@ -194,9 +194,6 @@ const TURN_ZONE = 28;
 const DRAG_MIN = 4;
 const SMALL = 36;
 function handlePos(b, k) { const [ux, uy] = UNIT[k]; return { x: b.x + (ux + 1) / 2 * b.w, y: b.y + (uy + 1) / 2 * b.h }; }
-const hangSide = (s) => s.settings?.["Emitter side"] || "bottom";
-const hangs = (e) => { const s = styleDef(e.kind, e.style); return s?.placement === "point" && !inWindow(s, e); };
-const framed = (e) => { const s = styleDef(e.kind, e.style); return s?.placement === "window" || (s?.placement === "point" && inWindow(s, e)); };
 function frameHandles(e, b) {
   const q = e.where.a && toScreen(e.where.a);
   return HANDLES.filter((k) => (k.length === 2 || (UNIT[k][0] ? b.h : b.w) * view.s >= SMALL)
@@ -257,7 +254,7 @@ function hitTest(sx, sy) {
     const b = boxOf(e);
     if (b) {
       for (const k of frameHandles(e, b)) if (near(handlePos(b, k))) return { kind: "size", k };
-      if ((S.ui.tool === "frame" || S.ui.tool === "point") && s.placement !== "ab" && cp.x > b.x && cp.x < b.x + b.w && cp.y > b.y && cp.y < b.y + b.h) return { kind: "box" };
+      if ((S.ui.tool === "frame" || S.ui.tool === "point") && cp.x > b.x && cp.x < b.x + b.w && cp.y > b.y && cp.y < b.y + b.h) return { kind: "box" };
     }
   }
   return null;
@@ -317,7 +314,7 @@ function startDrag(hit, cp) {
     drag = { ...hit, start: cp, g0: g, ang: Math.atan2(cp.y - g.centre.y, cp.x - g.centre.x), turned: 0 };
     S.setUI({ selected: "place" });
   } else {
-    drag = { ...hit, start: cp, box0: boxOf(e), a0: e.where.a };
+    drag = { ...hit, start: cp, box0: boxOf(e) };
     S.setUI({ selected: hit.kind === "point" ? hit.which : hit.kind === "dir" ? "dir" : "box" });
   }
 }
@@ -338,12 +335,8 @@ function setPoint(cp, which) {
   S.change((s) => {
     const fx = s.effects.find((x) => x.id === s.active);
     if (!fx) { s.pendingWhere = { ...(s.pendingWhere || { a: null, b: null, word: "" }), [which]: pt }; return; }
-    const old = fx.where[which];
+    if (which === "a" && !fx.where.a) fx.box = null;
     fx.where[which] = pt;
-    if (which !== "a" || !fx.box) return;
-    const b = fx.box, inside = pt.x > b.x && pt.x < b.x + b.w && pt.y > b.y && pt.y < b.y + b.h;
-    if (!old) fx.box = null;
-    else if (hangs(fx) || !inside) fx.box = { ...b, x: b.x + pt.x - old.x, y: b.y + pt.y - old.y };
   }, "point");
   S.setUI({ selected: which });
 }
@@ -440,28 +433,16 @@ function onMove(ev) {
     if (!e) return;
     if (drag.kind === "point") {
       const pt = { x: Math.round(clamp(cp.x, 0, c.width)), y: Math.round(clamp(cp.y, 0, c.height)) };
-      if (drag.which === "a" && drag.box0 && e.box && S.ui.tool === "frame" && framed(e)) {
-        const b = e.box;
-        pt.x = Math.round(clamp(pt.x, b.x, b.x + b.w)); pt.y = Math.round(clamp(pt.y, b.y, b.y + b.h));
-      } else if (drag.which === "a" && drag.box0 && e.box && drag.a0) {
-        e.box = { ...e.box, x: drag.box0.x + (pt.x - drag.a0.x), y: drag.box0.y + (pt.y - drag.a0.y) };
-      }
       e.where[drag.which] = pt;
     } else if (drag.kind === "box") {
       const b = drag.box0;
       const [mx0, my0, lock] = along(ev, cp.x - drag.start.x, cp.y - drag.start.y);
       const sn = snapGuides(b.x + mx0 + b.w / 2, b.y + my0 + b.h / 2, ev, [], [], { x0: b.x + mx0, x1: b.x + mx0 + b.w, y0: b.y + my0, y1: b.y + my0 + b.h }, lock);
-      let mx = mx0 + sn.dx, my = my0 + sn.dy;
-      const a = e.where.a;
-      if (a && framed(e)) {
-        mx = clamp(mx, a.x - b.x - b.w, a.x - b.x); my = clamp(my, a.y - b.y - b.h, a.y - b.y);
-      }
+      const mx = mx0 + sn.dx, my = my0 + sn.dy;
       drag.guides = sn.lines;
       e.box = { x: b.x + mx, y: b.y + my, w: b.w, h: b.h };
-      if (hangs(e) && drag.a0) e.where.a = { x: Math.round(drag.a0.x + mx), y: Math.round(drag.a0.y + my) };
     } else if (drag.kind === "size") {
-      e.box = holdA(e, resizeBox(e, drag.box0, drag.k, cp, ev.altKey, ev.shiftKey));
-      if (hangs(e) && e.where.a) e.where.a = onHangSide(e, e.box);
+      e.box = resizeBox(drag.box0, drag.k, cp, ev.altKey, ev.shiftKey);
     } else if (drag.kind === "paint") {
       const st0 = e.paint[drag.target].at(-1);
       const last = st0.pts.at(-1);
@@ -507,8 +488,7 @@ function cursorFor(hv) {
 let hoverText = "";
 function hoverHint(hv) {
   if (!hv) return "";
-  const point = !!eff() && hangs(eff());
-  if (hv.kind === "size") return point ? "Drag: size · Shift: keep its shape (it stays on its point)" : "Drag: size · Shift: keep its shape · Alt: from the centre";
+  if (hv.kind === "size") return "Drag: size · Shift: keep its shape · Alt: from the centre";
   if (hv.kind === "box") return S.ui.tool === "point" ? "Drag: move the area · Click: set the point here" : "Drag: move · Shift: one direction · Ctrl: no snapping";
   if (hv.kind === "point") return hv.which === "b" ? "Drag: move point B · Delete removes it" : "Drag: move the point";
   if (hv.kind === "dir") return "Drag: direction · Shift: 15° steps";
@@ -517,19 +497,13 @@ function hoverHint(hv) {
   if (hv.kind === "turn") return "Drag: turn · Shift: 15° steps";
   return "";
 }
-function resizeBox(e, b, k, cp, centre, keep) {
-  const min = 16, s = styleDef(e.kind, e.style), a = e.where.a;
-  const hang = hangs(e) && a ? hangSide(s) : null;
-  if (s.placement === "ab") centre = true;
+function resizeBox(b, k, cp, centre, keep) {
+  const min = 16;
   const [hx, hy] = UNIT[k];
-  const across = hang === "left" || hang === "right";
-  const own = (hang === "left" && hx < 0) || (hang === "right" && hx > 0) || (hang === "top" && hy < 0) || (hang === "bottom" && hy > 0);
-  const pinX = across && !own, pinY = !!hang && !across && !own;
-  const midX = !pinX && (centre || (!!hang && !(own && across))), midY = !pinY && (centre || (!!hang && !(own && !across)));
-  const cx = hang ? a.x : b.x + b.w / 2, cy = hang ? a.y : b.y + b.h / 2;
-  const fx = pinX ? a.x : hx < 0 ? b.x + b.w : b.x, fy = pinY ? a.y : hy < 0 ? b.y + b.h : b.y;
-  let w = !hx ? b.w : midX ? 2 * Math.abs(cp.x - cx) : Math.abs(cp.x - fx);
-  let hh = !hy ? b.h : midY ? 2 * Math.abs(cp.y - cy) : Math.abs(cp.y - fy);
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+  const fx = hx < 0 ? b.x + b.w : b.x, fy = hy < 0 ? b.y + b.h : b.y;
+  let w = !hx ? b.w : centre ? 2 * Math.abs(cp.x - cx) : Math.abs(cp.x - fx);
+  let hh = !hy ? b.h : centre ? 2 * Math.abs(cp.y - cy) : Math.abs(cp.y - fy);
   if (keep) {
     const r = b.w / b.h;
     if (hx && hy) { if (w / r > hh) hh = w / r; else w = hh * r; }
@@ -537,24 +511,12 @@ function resizeBox(e, b, k, cp, centre, keep) {
     else w = hh * r;
   }
   w = Math.max(min, w); hh = Math.max(min, hh);
-  const side = (moved, pin, mid, c0, f, p, lo, n) => {
-    if (pin) return hang === "right" || hang === "bottom" ? f - n : f;
-    if (mid || (!moved && keep)) return c0 - n / 2;
+  const side = (moved, c0, f, p, lo, n) => {
+    if (centre || (!moved && keep)) return c0 - n / 2;
     if (!moved) return lo;
     return p >= f ? f : f - n;
   };
-  return { x: side(!!hx, pinX, midX, cx, fx, cp.x, b.x, w), y: side(!!hy, pinY, midY, cy, fy, cp.y, b.y, hh), w, h: hh };
-}
-function onHangSide(e, b) {
-  const a = e.where.a, side = hangSide(styleDef(e.kind, e.style));
-  if (side === "left" || side === "right") return { x: Math.round(side === "left" ? b.x : b.x + b.w), y: a.y };
-  return { x: a.x, y: Math.round(side === "top" ? b.y : b.y + b.h) };
-}
-function holdA(e, b) {
-  const a = e.where.a;
-  if (!b || !a || !framed(e)) return b;
-  const x0 = Math.min(b.x, a.x), y0 = Math.min(b.y, a.y);
-  return { x: x0, y: y0, w: Math.max(b.x + b.w, a.x) - x0, h: Math.max(b.y + b.h, a.y) - y0 };
+  return { x: side(!!hx, cx, fx, cp.x, b.x, w), y: side(!!hy, cy, fy, cp.y, b.y, hh), w, h: hh };
 }
 function resizeResult(g, k, cp, centre, keep) {
   const [ux, uy] = UNIT[k];
@@ -675,17 +637,11 @@ function nudge(ev) {
     if (sel === "a" || sel === "b") {
       const p = e.where[sel];
       if (!p) return;
-      const pt = { x: Math.round(p.x + dx), y: Math.round(p.y + dy) }, pl = styleDef(e.kind, e.style)?.placement, b = e.box;
-      if (sel === "a" && b && framed(e) && S.ui.tool === "frame") { pt.x = Math.round(clamp(pt.x, b.x, b.x + b.w)); pt.y = Math.round(clamp(pt.y, b.y, b.y + b.h)); }
-      else if (sel === "a" && b && (pl === "point" || pl === "window")) e.box = { ...b, x: b.x + pt.x - p.x, y: b.y + pt.y - p.y };
-      e.where[sel] = pt;
+      e.where[sel] = { x: Math.round(p.x + dx), y: Math.round(p.y + dy) };
     }
     if (sel === "box" && styleDef(e.kind, e.style)?.placement !== "ab") {
-      const b = boxOf(e), a = e.where.a;
-      let mx = dx, my = dy;
-      if (b && a && framed(e)) { mx = clamp(mx, a.x - b.x - b.w, a.x - b.x); my = clamp(my, a.y - b.y - b.h, a.y - b.y); }
-      if (b) e.box = { ...b, x: b.x + mx, y: b.y + my };
-      if (b && hangs(e) && e.where.a) e.where.a = { x: Math.round(e.where.a.x + dx), y: Math.round(e.where.a.y + dy) };
+      const b = boxOf(e);
+      if (b) e.box = { ...b, x: b.x + dx, y: b.y + dy };
     }
     if (sel === "place") { const p = placeAt(e, now()); setPlace(e, { dx: Math.round(p.dx + dx), dy: Math.round(p.dy + dy) }, now(), fpsOf()); }
     if (sel === "dir") e.dir = Math.round((((e.dir ?? naturalDir(styleDef(e.kind, e.style))) + (dx || dy) * view.s * (ev.shiftKey ? 1.5 : 1)) % 360 + 360) % 360);
@@ -699,9 +655,9 @@ function sizeSelected(f) {
     if (sel === "box") {
       const b = boxOf(e);
       if (!b) return;
-      const a = hangs(e) && e.where.a ? e.where.a : { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+      const a = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
       f = Math.max(f, 16 / Math.min(b.w, b.h));
-      e.box = holdA(e, { x: a.x - (a.x - b.x) * f, y: a.y - (a.y - b.y) * f, w: b.w * f, h: b.h * f });
+      e.box = { x: a.x - (a.x - b.x) * f, y: a.y - (a.y - b.y) * f, w: b.w * f, h: b.h * f };
     }
     if (sel === "place") { const p = placeAt(e, now()); setPlace(e, { scale: +clamp(p.scale * f, 0.05, 10).toFixed(3) }, now(), fpsOf()); }
   }, "size");

@@ -23,6 +23,8 @@ const variants = [
   { a: [200, 300], ground: "light", inpaint: true, scene: "A man on a skateboard in a park.", night: true },
   { a: [640, 360], look: "pale blue gas flame", motion: "sways gently", strength: "subtle" },
   { a: [100, 100], prompt: "My own words", inpaint: false, adv: { "Particle amount": 1.5 } },
+  { a: [300, 400], box: [50, 600, 260, 380] },
+  { a: [500, 500], b: [900, 700], box: [420, 120, 333, 301.5] },
 ];
 const out = [];
 for (const e of presets.effects) for (const s of e.styles) for (const clip of clips) for (const [vi, v] of variants.entries()) {
@@ -39,6 +41,7 @@ for (const e of presets.effects) for (const s of e.styles) for (const clip of cl
   if (v.prompt) fx.prompt = v.prompt;
   if (v.inpaint != null) fx.adv[P.INPAINT] = v.inpaint;
   if (v.adv) Object.assign(fx.adv, v.adv);
+  if (v.box) fx.box = { x: v.box[0], y: v.box[1], w: v.box[2], h: v.box[3] };
   fx.seed = { mode: "keep", value: 1234 };
   const shot = { clip, night: !!v.night, scene: v.scene || "" };
   for (const scale of [1, 0.5]) {

@@ -40,6 +40,7 @@ Open **Templates → Extensions → comfyui-element-forge → Element Forge (app
 
 - **Canvas**<br>Moves like ComfyUI's graph and follows its settings: by default the mouse wheel zooms, dragging empty space pans, Space-drag and the middle button pan too, `.` fits the clip.
 - **Transform box**<br>The effect's area and the finished result share one box. Drag inside to move it, a corner or an edge to size it freely (Shift keeps its shape, Alt sizes from the centre), just outside a corner of the result to turn it (Shift: 15° steps).
+- **Area and point apart**<br>Once you move or size the area, it stays where you put it: moving the point does not move the area, and the area does not move the point. The point may lie outside the area, for particles that fly away from where they start. The effect keeps following the point's track.
 - **Timeline**<br>Shows the clip as a filmstrip and the bar of the selected effect: start, end, fade in and fade out. *Start here* and *End here* use the playhead. Advanced adds keyframes for position and brightness.
 - **Views**<br>The switch at the bottom right shows the clip, depth, normals, the track check or the result. Each step opens on its own view: Position and Effect on the clip with the live particles, Light & glow and Export on the result. A view that hides the particles says so in the canvas, with **Back to the clip**.
 

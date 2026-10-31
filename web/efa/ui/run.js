@@ -37,6 +37,11 @@ export const usesGuide = (st, effect) => {
 };
 export const inWindow = (st, effect) => st?.placement === "point"
   && (usesGuide(st, effect) || !!withAdv(st, effect).Particles || !!withAdv(st, effect)["Follows motion"]);
+export function basePoint(st, b) {
+  const side = st?.settings?.["Emitter side"] || "bottom";
+  return { x: side === "left" ? b.x : side === "right" ? b.x + b.w : b.x + b.w / 2,
+    y: side === "top" ? b.y : side === "bottom" ? b.y + b.h : b.y + b.h / 2 };
+}
 
 export function defaultBox(effect, clip) {
   const st = styleDef(effect.kind, effect.style);
@@ -68,16 +73,7 @@ export function defaultBox(effect, clip) {
   return null;
 }
 export function frameBox(effect, clip) {
-  const b = effect.box || defaultBox(effect, clip);
-  const { a, b: pb } = effect.where;
-  const st = styleDef(effect.kind, effect.style);
-  if (b && effect.box && a && st?.placement === "point" && !inWindow(st, effect)) {
-    const side = st.settings?.["Emitter side"] || "bottom";
-    return { x: side === "left" ? a.x : side === "right" ? a.x - b.w : a.x - b.w / 2,
-      y: side === "top" ? a.y : side === "bottom" ? a.y - b.h : a.y - b.h / 2, w: b.w, h: b.h };
-  }
-  if (!b || !effect.box || !a || !pb || styleDef(effect.kind, effect.style)?.placement !== "ab") return b;
-  return { x: (a.x + pb.x) / 2 - b.w / 2, y: (a.y + pb.y) / 2 - b.h / 2, w: b.w, h: b.h };
+  return effect.box || defaultBox(effect, clip);
 }
 
 export const quality = () => (S.getShot()?.output?.quality === "preview" ? "preview" : "full");
@@ -116,8 +112,8 @@ export function valuesFor(effect, shot, scale = 1) {
     v["Window A-B automatic"] = false;
     v["Window width (plate px)"] = Math.round(w.w);
     v["Window height (plate px)"] = Math.round(w.h);
-    v["Emitter x in window"] = +clamp((a.x - w.x) / w.w, 0, 1).toFixed(3);
-    v["Emitter y in window"] = +clamp((a.y - w.y) / w.h, 0, 1).toFixed(3);
+    v["Emitter x in window"] = +clamp((a.x - w.x) / w.w, -4, 5).toFixed(3);
+    v["Emitter y in window"] = +clamp((a.y - w.y) / w.h, -4, 5).toFixed(3);
     [v["Generate width"], v["Generate height"]] = [w.gw, w.gh];
   } else if (st.placement === "ab") {
     v["Window A-B automatic"] = true;
@@ -135,6 +131,9 @@ export function valuesFor(effect, shot, scale = 1) {
     v["Generate width"] = gw;
     v["Generate height"] = gh;
     v["Size in plate"] = +Math.min(b.w / gw, b.h / gh).toFixed(3);
+    const p = basePoint(st, b), dx = Math.round(p.x - a.x), dy = Math.round(p.y - a.y);
+    if (dx) v["Base beside A x (plate px)"] = dx;
+    if (dy) v["Base beside A y (plate px)"] = dy;
   }
   if (effect.timing.start) v["Starts at (s)"] = +effect.timing.start.toFixed(2);
   if (st.dir === "dissolve") {
