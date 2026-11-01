@@ -19,6 +19,12 @@ const PL_SHAPE = { frame: "whole frame", object: "object mask", between: "line A
 export const placeFixed = (st) => !st || (st.variant || "app") !== "app";
 export const placeOwn = (st) => PL_OF[st?.placement] || "point";
 export const placeOf = (e, st) => (placeFixed(st) ? placeOwn(st) : e?.adv?.[PLACEMENT] || placeOwn(st));
+const PLACE_WORDS = { object: "It covers {the %|the object}, following its shape.", frame: "It fills the whole frame.",
+  between: "It runs from one point to the other." };
+const placeMoved = (e, st) => {
+  const want = e?.adv?.[PLACEMENT];
+  return want && !placeFixed(st) && want !== placeOwn(st) && PL_TO[want] ? want : "";
+};
 export const SIDE = "Emitter side";
 export const sideOf = (e, st) => e?.adv?.[SIDE] || st?.settings?.[SIDE] || "bottom";
 function withPlace(st, e) {
@@ -31,7 +37,10 @@ function withPlace(st, e) {
     if (PL_SHAPE[want]) sets["Particle emitter"] = PL_SHAPE[want];
     else if (["whole frame", "line A-B", "object mask", "object contour", "object bottom edge"].includes(s0["Particle emitter"])) delete sets["Particle emitter"];
   }
-  if (want === "frame") sets["Sticks to scene (off = object)"] = s0["Sticks to scene (off = object)"] ?? true;
+  if (want === "frame") {
+    sets["Sticks to scene (off = object)"] = s0["Sticks to scene (off = object)"] ?? true;
+    if (s0[INPAINT]) sets[INPAINT] = false;
+  }
   if (want === "between") sets["Window A-B automatic"] = true;
   return { ...st, placement: PL_TO[want], settings: sets };
 }
@@ -74,7 +83,7 @@ export function changedBlocks(effect) {
 
 export const INPAINT = "Inpaint (off = on black)";
 export const inScene = (effect) => {
-  const st = styleDef(effect?.kind, effect?.style);
+  const st = styleOf(effect);
   return st?.placement !== "frame" && !!(effect?.adv?.[INPAINT] ?? st?.settings?.[INPAINT]);
 };
 export const LIBRARY = "Element from library", LIBRARY_ELEMENT = "Library element";
@@ -125,7 +134,8 @@ function composeRaw(effect) {
   const tail = paint ? "" : data?.tail_on_black || "";
   if (effect.prompt != null) return paint ? effect.prompt : withTail(effect.prompt, tail);
   const qw = quickWords(effect);
-  const untouched = !changedBlocks(effect).length && effect.strength === "normal" && effect.dir == null && !qw;
+  const moved = placeMoved(effect, st);
+  const untouched = !changedBlocks(effect).length && effect.strength === "normal" && effect.dir == null && !qw && !moved;
   if (untouched && p.preset) return paint ? withoutBlack(p.preset) : p.preset;
   const block = (k) => strip(effect.text[k] !== undefined && effect.text[k] !== "" ? effect.text[k] : p[k]);
   const lookChanged = changedBlocks(effect).includes("look");
@@ -139,7 +149,7 @@ function composeRaw(effect) {
   const contact = block("contact");
   const first = cap([what, action].filter(Boolean).join(" ") + (contact ? `, and ${contact}` : "")) + ".";
   const look = block("look");
-  return [first, look ? cap(look) + "." : ""].filter(Boolean).join(" ") + tail;
+  return [first, PLACE_WORDS[moved] || "", look ? cap(look) + "." : ""].filter(Boolean).join(" ") + tail;
 }
 
 export const withTail = (s, tail = data?.tail_on_black || "") => (!tail || /black background/i.test(s || "") ? s : `${(s || "").trimEnd()}${tail}`);

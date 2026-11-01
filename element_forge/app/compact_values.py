@@ -66,6 +66,8 @@ def with_place(st, effect):
             sets.pop("Particle emitter", None)
     if want == "frame":
         sets["Sticks to scene (off = object)"] = s0.get("Sticks to scene (off = object)", True)
+        if s0.get(INPAINT):
+            sets[INPAINT] = False
     if want == "between":
         sets["Window A-B automatic"] = True
     return {**st, "placement": PL_TO[want], "settings": sets}
@@ -279,6 +281,18 @@ def quick_words(effect):
     return ", ".join(w)
 
 
+PLACE_WORDS = {"object": "It covers {the %|the object}, following its shape.", "frame": "It fills the whole frame.",
+               "between": "It runs from one point to the other."}
+
+
+def place_moved(presets, effect):
+    raw = style_def(presets, effect["kind"], effect["style"]) or {}
+    want = (effect.get("adv") or {}).get(PLACEMENT)
+    if want and (raw.get("variant") or "app") == "app" and want != PL_OF.get(raw.get("placement"), "point") and want in PL_TO:
+        return want
+    return ""
+
+
 def _compose_raw(presets, st, effect):
     p = prompt_of(st, effect)
     if not p:
@@ -289,7 +303,9 @@ def _compose_raw(presets, st, effect):
         return effect["prompt"] if paint else with_tail(effect["prompt"], tail)
     t = effect["text"]
     qw = quick_words(effect)
-    untouched = not changed_blocks(st, effect) and effect.get("strength", "normal") == "normal" and effect.get("dir") is None and not qw
+    moved = place_moved(presets, effect)
+    untouched = (not changed_blocks(st, effect) and effect.get("strength", "normal") == "normal" and effect.get("dir") is None
+                 and not qw and not moved)
     if untouched and p.get("preset"):
         return without_black(p["preset"]) if paint else p["preset"]
 
@@ -310,7 +326,7 @@ def _compose_raw(presets, st, effect):
     contact = block("contact")
     first = _cap(" ".join(x for x in (what, action) if x) + (f", and {contact}" if contact else "")) + "."
     look = block("look")
-    return " ".join(x for x in (first, _cap(look) + "." if look else "") if x) + tail
+    return " ".join(x for x in (first, PLACE_WORDS.get(moved, ""), _cap(look) + "." if look else "") if x) + tail
 
 
 def values_for(presets, effect, shot, scale=1.0):

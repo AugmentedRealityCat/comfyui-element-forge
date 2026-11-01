@@ -78,7 +78,7 @@ The app's gear menu selects the language model when more than one is installed.
 
 - **Templates or nodes missing:** check ComfyUI's startup log for import errors. Install requirements with ComfyUI's Python, then restart.
 - **Missing models:** use the app's model list to check the exact filename and folder. Video Depth Anything Small may download on its first run.
-- **Running out of memory:** use a shorter or smaller clip, Preview quality and fewer passes. ComfyUI's `--cache-none` option can reduce retained results, at the cost of recomputing them. On Windows, a small page file can also limit available memory.
+- **Running out of memory:** use a shorter or smaller clip, Preview quality and fewer passes. **The object crumbles** together with an AI effect runs a second LTX pass for the background behind the object; on a 1080p clip of 89 frames it took about 70 GB of system RAM in testing, so start it on a freshly started ComfyUI. ComfyUI's `--cache-none` option can reduce retained results, at the cost of recomputing them. On Windows, a small page file can also limit available memory.
 - **`cv2` package conflict:** `opencv-python` and `opencv-python-headless` provide the same module; avoid keeping conflicting installations in the same environment.
 - **NVIDIA VFX fails to import:** check that its dependencies installed successfully. Errors such as `wheel_stub.buildapi` or missing `nvvfx` affect the optional NVIDIA feature; leave it disabled while resolving the installation.
 - **Bonsai reports `no CUDA backend`:** check that the installed runtime matches the CUDA version used by ComfyUI. The model may otherwise run on the CPU.

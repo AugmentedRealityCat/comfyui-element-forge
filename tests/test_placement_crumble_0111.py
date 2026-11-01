@@ -101,6 +101,15 @@ x0 = 1000 - vab["Emitter x in window"] * vab["Window width (plate px)"]
 y0 = 525 - vab["Emitter y in window"] * vab["Window height (plate px)"]
 check(vab["Window A-B automatic"] is False and x0 <= 1000 and x0 + vab["Window width (plate px)"] >= 1350
       and y0 <= 230 and y0 + vab["Window height (plate px)"] >= 525, "a guided flame between A and B: its window holds A and B")
+fob = {**fab, "where": {"a": {"x": 1000, "y": 525}, "b": None, "word": "sword blade"}, "adv": {cv.PLACEMENT: "object"}}
+pob = cv.values_for(presets, fob, {"clip": clip0, "night": False, "scene": ""})["Effect prompt"]
+check("It covers the sword blade, following its shape." in pob and "lower half" not in pob,
+      "a flame moved onto the object is told so, not to fill the lower half of the frame (night probe 01.11.)")
+check("lower half" in cv.values_for(presets, {**fob, "adv": {}}, {"clip": clip0, "night": False, "scene": ""})["Effect prompt"],
+      "at its own place the flame keeps its tested text")
+sm = cv.values_for(presets, {**fob, "kind": "fire", "style": "smolder", "adv": {cv.PLACEMENT: "frame"}}, {"clip": clip0, "night": False, "scene": ""})
+check(sm.get("Inpaint (off = on black)") is False and "black background" in sm["Effect prompt"],
+      "embers moved to the whole frame are made on black (painting in needs a place to follow)")
 
 check(cv.colour_name("#3070ff") == "blue" and cv.colour_name("#ffffff") == "white", "a picked colour has the nearest named colour for the AI")
 check(cv.quick_words({"quick": {"colour": "#e8202a", "amount": "more", "size": "smaller"}}) == "mainly red, dense and abundant, small",

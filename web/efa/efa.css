@@ -88,6 +88,7 @@
 .efa-root .field.stack > .label { margin-bottom: 0; }
 .efa-root .field.mask { gap: 6px; }
 .efa-root .field.mask > .label, .efa-root .field.mask > p { margin: 0; }
+.efa-root .field.live > .note { margin-bottom: 6px; }
 .efa-root .text { width: 100%; height: 32px; padding: 0 10px; border-radius: var(--radius-s); border: 1px solid var(--line-2); background: var(--panel-2); }
 .efa-root .text.area { height: auto; padding: 8px 10px; resize: vertical; line-height: 1.45; }
 .efa-root .text:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
