@@ -38,6 +38,23 @@ def style_def(presets, kind, style):
     return None
 
 
+DIRECT_LOOK = "Particles: direct look (no LTX, pro)"
+
+
+def style_of(presets, effect):
+    st = style_def(presets, effect["kind"], effect["style"])
+    if not st:
+        return st
+    a, s0 = effect.get("adv") or {}, st.get("settings") or {}
+    parts = bool(a["Particles"] if "Particles" in a else s0.get("Particles"))
+    direct = bool(a[DIRECT_LOOK] if DIRECT_LOOK in a else s0.get(DIRECT_LOOK))
+    preset = a.get("Particle preset") or s0.get("Particle preset")
+    if parts == bool(s0.get("Particles")) and direct == bool(s0.get(DIRECT_LOOK)) and preset == s0.get("Particle preset"):
+        return st
+    sets = {**s0, "Particles": parts, DIRECT_LOOK: direct, **({"Particle preset": preset} if preset else {})}
+    return {**st, "cost": "calc" if direct and (parts or st.get("variant") == "climb") else "gen", "settings": sets}
+
+
 def effect_styles(presets):
     return [f"{e['id']}/{s['id']}" for e in presets.get("effects", []) for s in e["styles"]]
 
@@ -223,7 +240,7 @@ def _compose_raw(presets, st, effect):
 
 
 def values_for(presets, effect, shot, scale=1.0):
-    st = style_def(presets, effect["kind"], effect["style"])
+    st = style_of(presets, effect)
     if not st:
         raise ValueError(f"unknown effect and style {effect['kind']}/{effect['style']}")
     clip = shot["clip"]

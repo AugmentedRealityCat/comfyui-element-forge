@@ -8,6 +8,18 @@ export async function loadPresets() {
 export const presets = () => data;
 export const effectDef = (kind) => data?.effects.find((e) => e.id === kind) || null;
 export const styleDef = (kind, style) => effectDef(kind)?.styles.find((s) => s.id === style) || null;
+export const DIRECT_LOOK = "Particles: direct look (no LTX, pro)";
+export function styleOf(e) {
+  const st = e ? styleDef(e.kind, e.style) : null;
+  if (!st) return st;
+  const a = e.adv || {}, s0 = st.settings || {};
+  const parts = !!(a.Particles ?? s0.Particles), direct = !!(a[DIRECT_LOOK] ?? s0[DIRECT_LOOK]);
+  const preset = a["Particle preset"] || s0["Particle preset"];
+  if (parts === !!s0.Particles && direct === !!s0[DIRECT_LOOK] && preset === s0["Particle preset"]) return st;
+  return { ...st, cost: direct && (parts || st.variant === "climb") ? "calc" : "gen",
+    settings: { ...s0, Particles: parts, [DIRECT_LOOK]: direct, ...(preset ? { "Particle preset": preset } : {}) } };
+}
+export const startPreset = (st) => st?.settings?.["Particle preset"] || st?.guide_particles || "magic dust";
 export const missingFor = (variant) => data?.missing?.[variant] || { nodes: [], models: [] };
 
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);

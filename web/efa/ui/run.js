@@ -1,6 +1,6 @@
 import * as S from "./state.js";
 import * as C from "./comfy.js";
-import { styleDef, composePrompt, inScene, inpaintSettings, objectWord, INPAINT, fromLibrary } from "./presets.js";
+import { styleDef, styleOf, composePrompt, inScene, inpaintSettings, objectWord, INPAINT, fromLibrary } from "./presets.js";
 import { clamp, store, uid } from "./lib.js";
 import { ltxForBuild } from "./machine.js";
 
@@ -44,7 +44,7 @@ export function basePoint(st, b) {
 }
 
 export function defaultBox(effect, clip) {
-  const st = styleDef(effect.kind, effect.style);
+  const st = styleOf(effect);
   const a = effect.where.a || { x: clip.width / 2, y: clip.height / 2 };
   if (!st) return null;
   if (st.placement === "window") {
@@ -92,7 +92,7 @@ const passesOf = (mode, effect, values, variant) => ((mode === "preview" && !VAR
 const previewScale = (st, effect) => (canPreview(st, effect) && quality() === "preview" ? 0.5 : 1);
 
 export function valuesFor(effect, shot, scale = 1) {
-  const st = styleDef(effect.kind, effect.style);
+  const st = styleOf(effect);
   const clip = shot.clip;
   const v = { ...st.settings };
   if (clip.still) {
@@ -169,7 +169,7 @@ export function valuesFor(effect, shot, scale = 1) {
 }
 
 export function estimate(effect, shot) {
-  const st = styleDef(effect.kind, effect.style);
+  const st = styleOf(effect);
   if (!st || !shot.clip) return null;
   const frames = ltxFrames(shot.clip.frames);
   if (st.cost !== "gen" || fromLibrary(effect)) return { lo: 1, hi: 3 };
@@ -267,7 +267,7 @@ export async function generate(effect, opts = {}) {
   };
   try {
     const shot = S.getShot();
-    const st = styleDef(effect.kind, effect.style);
+    const st = styleOf(effect);
     const from = opts.from || null;
     const mode = from ? "final" : previewScale(st, effect) < 1 ? "preview" : "full";
     state.learn = mode !== "final";
@@ -405,7 +405,7 @@ const efaPaint = new Map();
 export const OUTPUT = { quality: "full", upscale: "off", passes: { depth: true, normals: true, mask: true }, saveElement: false };
 export const canSaveElement = (st, effect) => !!st && st.cost === "gen" && (st.variant || "app") === "app" && !inScene(effect) && !fromLibrary(effect);
 export const outputOf = (shot) => ({ ...OUTPUT, ...shot?.output, passes: { ...OUTPUT.passes, ...shot?.output?.passes } });
-export function efaApp(shot, e, st = styleDef(e?.kind, e?.style)) {
+export function efaApp(shot, e, st = styleOf(e)) {
   const o = outputOf(shot);
   return { mode: o.quality === "preview" && canPreview(st, e) ? "preview" : "full",
     skip: Object.entries(o.passes).filter(([, on]) => !on).map(([p]) => p), effect: e.id,
@@ -416,7 +416,7 @@ export function efaApp(shot, e, st = styleDef(e?.kind, e?.style)) {
 export function efaValues(shot) {
   const e = shot.effects.find((x) => x.id === shot.active);
   if (!e || !shot.clip || !e.kind || !e.style || !styleDef(e.kind, e.style)) return { values: {}, values_for: null, pending: null, app: null };
-  const st = styleDef(e.kind, e.style), app = efaApp(shot, e, st);
+  const st = styleOf(e), app = efaApp(shot, e, st);
   const v = valuesFor({ ...e, seed: { mode: "keep", value: e.seed?.value ?? 0 } }, shot, app.mode === "preview" ? 0.5 : 1);
   if (outputOf(shot).upscale === "nvidia" && st.cost === "gen") v["NVIDIA SR + HDR"] = true;
   const key = JSON.stringify([e.id, shot.clip.name, e.adv?.["Own object mask (off = click)"], e.adv?.["Guide source"], e.adv?.["Particle emitter"], e.paint]);

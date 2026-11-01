@@ -15,6 +15,7 @@ OWN_MASK = "Own object mask (off = click)"
 ALL_ALIKE = "Object word: all alike objects (e.g. all sticks of a crown; off = the clicked one)"
 OBJECT_IN_FRONT = "Object in front (its mask hides the element)"
 LOCK_BASE = "Base locked to the point (no jitter of the base)"
+DIRECT_LOOK = "Particles: direct look (no LTX, pro)"
 FOLLOWS = "Follows motion"
 GUIDE_SOURCE = "Guide source"
 UPSCALE = "LTX upscale x2 (latent upscaler + second pass, test)"
@@ -25,7 +26,7 @@ DISSOLVE_EXTRA = "Dissolve extra (JSON)"
 AI_GUIDE = "Guide for the AI (particles / drawn path / object shape / none)"
 GUIDE_CHOICES = ["style default", "none", "object shape", "drawn path", "particles"]
 GUIDE_PRESETS = ["fire", "embers", "sparks", "grinding sparks", "smoke", "dust burst", "magic dust", "aura", "liquid", "debris",
-                 "snow", "rain", "fireflies", "lightning", "cracks", "frost"]
+                 "snow", "rain", "fireflies", "lightning", "cracks", "frost", "lightning climb", "energy A-B"]
 
 _FALLBACK_STYLES = [
     "fire/flame", "fire/burst", "lightning/between", "lightning/climb", "lightning/climb_arcs",
@@ -87,6 +88,24 @@ def load_guide_particles():
 
 
 GUIDE_PARTICLES = load_guide_particles()
+
+
+def load_style_settings():
+    for path in _preset_candidates():
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            return {f"{e['id']}/{s['id']}": dict(s.get("settings") or {}) for e in data.get("effects", []) for s in e.get("styles", [])}
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+    return {}
+
+
+STYLE_SETTINGS = load_style_settings()
+
+
+def start_preset(style):
+    return STYLE_SETTINGS.get(style, {}).get("Particle preset") or GUIDE_PARTICLES.get(style) or "magic dust"
 
 FOLLOWS_VALUES = {"point": (False, False, False), "object": (False, True, False), "mask": (False, True, False),
                   "scene": (True, False, False), "screen": (False, False, True)}
@@ -155,7 +174,8 @@ class EFAppEffect:
                                "object shape: it takes the shape of the object it sits on. drawn path: it follows strokes "
                                "you paint. particles: the particles of the emitter guide it."}),
                 "guide_particles": (["style default"] + GUIDE_PRESETS, {"default": "style default",
-                    "tooltip": "The particles that guide the AI when the guide is particles."}),
+                    "tooltip": "The particles the effect starts from: they guide the AI (guide: particles) or are the "
+                               "effect (Made by: particles only). Style default = the style's own."}),
                 "keep_original": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05,
                     "tooltip": "Inpaint (Advanced): repaints less of the area, so it stays closer to the clip. 0 = off, "
                                "1 = keeps the most. The effect gets less room; a thin one like lightning can vanish."}),
@@ -166,6 +186,9 @@ class EFAppEffect:
                     "tooltip": "Advanced: the AI draws the effect a little differently in every frame, so its base can "
                                "jitter by a few pixels. On: the base stays fixed on the tracked point (a flame sits calmly "
                                "on the object and still flickers above). Off: only slow drift is removed."}),
+                "made_by": (["style default", "ai", "particles"], {"default": "style default",
+                    "tooltip": "ai: the AI makes the element (particles, if any, guide it). particles: the particles "
+                               "alone, drawn without an AI run. Style default = as the style has it."}),
             }
         }
 
@@ -260,6 +283,18 @@ def apply_effect(values, effect):
                 pp = str(effect.get("guide_particles") or "style default")
                 out["Particles"] = True
                 out["Particle preset"] = GUIDE_PARTICLES.get(style, "magic dust") if pp == "style default" else pp
+    style = str(effect.get("effect_style", ""))
+    made = str(effect.get("made_by") or "style default")
+    pp = str(effect.get("guide_particles") or "style default")
+    own = STYLE_SETTINGS.get(style, {})
+    if made == "particles":
+        out["Particles"] = True
+        out[DIRECT_LOOK] = True
+        out["Particle preset"] = pp if pp != "style default" else start_preset(style)
+    elif made == "ai" and own.get(DIRECT_LOOK):
+        out[DIRECT_LOOK] = False
+    if pp != "style default" and (out.get("Particles") or own.get("Particles")):
+        out["Particle preset"] = pp
     return out
 
 

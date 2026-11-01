@@ -1,7 +1,7 @@
 import { h, getJSON } from "./ui/lib.js";
 import { icon } from "./ui/icons.js";
 import * as S from "./ui/state.js";
-import { loadPresets, styleDef } from "./ui/presets.js";
+import { loadPresets, styleDef, startPreset, DIRECT_LOOK } from "./ui/presets.js";
 import { efaValues, estimate, ltxFrames, RUN_STEPS, runStepOf } from "./ui/run.js";
 import { mountStage, render as renderCanvas, releaseMedia, restoreMedia, togglePlay, loadNav, wheelZooms, dragPans, presentResult } from "./ui/stage.js";
 import { mountTimeline } from "./ui/timeline.js";
@@ -312,8 +312,14 @@ function applyCtx(ctx) {
     const st0 = styleDef(e.kind, e.style);
     if (adv[AI_GUIDE] === "particles" && st0 && !st0.settings?.Particles) {
       adv.Particles = true;
-      adv["Particle preset"] = ctx.guideParticles || st0.guide_particles || "magic dust";
+      adv["Particle preset"] = ctx.guideParticles || startPreset(st0);
     }
+    if (st0 && ctx.madeBy === "particles") {
+      adv.Particles = true;
+      adv[DIRECT_LOOK] = true;
+      adv["Particle preset"] = ctx.guideParticles || startPreset(st0);
+    } else if (st0 && ctx.madeBy === "ai" && st0.settings?.[DIRECT_LOOK]) adv[DIRECT_LOOK] = false;
+    if (st0 && ctx.guideParticles && (adv.Particles || st0.settings?.Particles)) adv["Particle preset"] = ctx.guideParticles;
     e.adv = adv;
   });
 }
@@ -322,7 +328,7 @@ const FOLLOWS_KEYS = ["Sticks to scene (off = object)", "Track follows the objec
 const ALWAYS = [...FOLLOWS_KEYS, "Own object mask (off = click)", "Object word: all alike objects (e.g. all sticks of a crown; off = the clicked one)",
   "LTX upscale x2 (latent upscaler + second pass, test)", "Inpaint (off = on black)"];
 const ADV_ONLY = ["Follows motion", "Guide source", AI_GUIDE, "Inpaint sigmas (start 0.909 = tested default)"];
-const GUIDE_PARTS = ["Particles", "Particle preset"];
+const GUIDE_PARTS = ["Particles", "Particle preset", DIRECT_LOOK];
 
 let saveTimer = 0;
 function scheduleSave() {

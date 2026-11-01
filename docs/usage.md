@@ -164,8 +164,9 @@ Particle styles also ask where the particles start. Some need a click, others th
 
 ### Where the element comes from
 
-- **Made by the AI**<br>The AI makes a new element at **Run**.
-- **From the library**<br>An element you kept with **Save the element** is placed again, without a new AI run. Position, size, light and glow follow this style; the words are not used. Only on black.
+- **Made by: AI**<br>The AI makes a new element at **Run**. Particles, if the style or the guide has them, steer it.
+- **Made by: Particles only**<br>Every style can be drawn by its particles alone, without an AI run, in about a minute. They start from the style's particles; in Advanced, **Particles** in the emitter's Source picks others (snow, sparks, smoke …).
+- **Made by: Library**<br>An element you kept with **Save the element** is placed again, without a new AI run. Position, size, light and glow follow this style; the words are not used. Only on black.
 
 ### Guide for the AI
 

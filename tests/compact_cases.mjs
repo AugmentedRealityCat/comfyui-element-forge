@@ -25,6 +25,8 @@ const variants = [
   { a: [100, 100], prompt: "My own words", inpaint: false, adv: { "Particle amount": 1.5 } },
   { a: [300, 400], box: [50, 600, 260, 380] },
   { a: [500, 500], b: [900, 700], box: [420, 120, 333, 301.5] },
+  { a: [400, 300], dir: 45, depth: 0.1, adv: { Particles: true, "Particles: direct look (no LTX, pro)": true, "Particle preset": "snow" } },
+  { a: [400, 300], adv: { "Particles: direct look (no LTX, pro)": false } },
 ];
 const out = [];
 for (const e of presets.effects) for (const s of e.styles) for (const clip of clips) for (const [vi, v] of variants.entries()) {

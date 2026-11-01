@@ -57,10 +57,11 @@ const groups = new Map();
 const COST_WORD = { gen: "AI", calc: "no AI" };
 function timeTag(e, kind, s) {
   const est = e && S.getShot().clip ? estimate({ ...e, kind, style: s.id, box: null }, S.getShot()) : null;
-  const tip = s.cost === "gen" ? "Made by the AI on the GPU" : "Made by the particles alone, without an LTX run";
-  const k = s.cost === "gen" ? "gen" : "calc";
+  const gen = (e ? P.styleOf({ ...e, kind, style: s.id }) || s : s).cost === "gen";
+  const tip = gen ? "Made by the AI on the GPU" : "Made by the particles alone, without an LTX run";
+  const k = gen ? "gen" : "calc";
   return h("span", { class: "cost " + k, title: tip },
-    `${COST_WORD[k]} · ` + (est ? `${est.lo}–${est.hi} min` : s.cost === "gen" ? "minutes" : "about a minute"));
+    `${COST_WORD[k]} · ` + (est ? `${est.lo}–${est.hi} min` : gen ? "minutes" : "about a minute"));
 }
 const note = (kind, text, ...more) => h("p", { class: "note " + kind }, icon(kind === "err" ? "alert" : kind === "hint" ? "chevron" : "check"), h("span", {}, text, ...more));
 
@@ -600,7 +601,7 @@ function chooseStyle(kind, sid) {
   }, "style");
   showTiles = false;
   if (fx().emitter_values) api.setFx("emitter_values", "");
-  for (const k of ["guide", "guide_particles"]) if (fx()[k] && fx()[k] !== "style default") api.setFx(k, "style default");
+  for (const k of ["guide", "guide_particles", "made_by"]) if (fx()[k] && fx()[k] !== "style default") api.setFx(k, "style default");
   if (fx().draw_path) api.setFx("draw_path", false);
   api.setFx("effect_style", `${kind}/${sid}`);
 }
@@ -716,10 +717,14 @@ async function loadLibrary() {
   } catch (err) { library = []; libraryErr = err.message; }
   render();
 }
-const canUseLibrary = (e, st) => !!st && st.cost === "gen" && (st.variant || "app") === "app" && !P.inScene(e);
+const canUseLibrary = (e, st) => !!st && (st.variant || "app") === "app" && !P.inScene(e);
+const MADE_BY = [["ai", "AI", "The AI makes a new element at Run (particles, if set, guide it)"],
+  ["particles", "Particles only", "The particles alone, drawn without an AI run (about a minute)"],
+  ["library", "Library", "An element you kept with Save the element: placed again, no new AI run"]];
 function libraryBlock(e, st) {
-  if (!canUseLibrary(e, st)) return [];
-  const on = !!e.adv?.[P.LIBRARY], name = e.adv?.[P.LIBRARY_ELEMENT] || "";
+  const on = !!e.adv?.[P.LIBRARY] && canUseLibrary(e, st), name = e.adv?.[P.LIBRARY_ELEMENT] || "";
+  const own = st.cost === "gen" ? "ai" : "particles";
+  const now = on ? "library" : P.styleOf(e)?.cost === "gen" ? "ai" : "particles";
   const set = (use, n) => S.change((sh) => {
     const x = sh.effects.find((y) => y.id === sh.active);
     x.adv = { ...x.adv };
@@ -727,13 +732,18 @@ function libraryBlock(e, st) {
     else { delete x.adv[P.LIBRARY]; delete x.adv[P.LIBRARY_ELEMENT]; }
   }, "library");
   const pick = (v) => {
-    if (v === (on ? "library" : "ai")) return;
-    if (v === "library") { library = null; loadLibrary(); }
-    set(v === "library", v === "library" ? name : "");
+    if (v === now) return;
+    if (v === "library") {
+      library = null; loadLibrary(); set(true, name);
+      api.setFx("made_by", own === "ai" ? "style default" : "ai");
+      return;
+    }
+    if (on) set(false, "");
+    api.setFx("made_by", v === own ? "style default" : v);
   };
-  const kids = [h("div", { class: "field" }, h("div", { class: "label" }, "Element"),
-    seg("Element", [["ai", "Made by the AI", "The AI makes a new element at Run"],
-      ["library", "From the library", "An element you kept with Save the element: placed again, no new AI run"]], on ? "library" : "ai", pick))];
+  const kids = [h("div", { class: "field" }, h("div", { class: "label" }, "Made by"),
+    seg("Made by", MADE_BY.map(([k, t, tip]) => [k, t, k === own ? `${tip} · as the style has it` : tip]), now, pick))];
+  if (e.adv?.[P.LIBRARY] && !on) kids.push(note("hint", "The library keeps AI elements made on black: this effect cannot place one."));
   if (!on) return kids;
   if (library === null) { loadLibrary(); kids.push(h("p", { class: "muted small" }, "Reading the library…")); return kids; }
   if (libraryErr) kids.push(note("err", `The library could not be read: ${libraryErr}`));
@@ -754,7 +764,7 @@ function howBlock(e, st) {
   const how = f.how_it_goes_in && f.how_it_goes_in !== "style default" ? f.how_it_goes_in : (st.settings?.[P.INPAINT] ? "inpaint" : "overlay");
   const kids = [h("div", { class: "field" }, h("div", { class: "label" }, "How it goes in"),
     seg("How it goes in", [["overlay", "Overlay", HOW.overlay], ["inpaint", "Inpaint", HOW.inpaint]], how, (v) => api.setFx("how_it_goes_in", v)),
-    h("p", { class: "muted small" }, HOW[how]))];
+    h("p", { class: "muted small" }, P.styleOf(e)?.cost === "gen" ? HOW[how] : "Counts when the AI makes the element; particles alone are drawn over the clip."))];
   if (how === "inpaint") {
     kids.push(sentenceField());
     if (fx().mode === "advanced") kids.push(keepRow());
@@ -824,7 +834,7 @@ function effectBody() {
   kids.push(...positionHints(e, st));
   kids.push(...libraryBlock(e, st));
   const lib = P.fromLibrary(e) || (!!e.adv?.[P.LIBRARY] && canUseLibrary(e, st));
-  if (st.cost === "gen" && !lib) {
+  if (!lib) {
     const p = P.promptOf(e);
     if (p) kids.push(h("div", { class: "field" }, h("div", { class: "label" }, "Strength"),
       seg("Strength", [["subtle", "Subtle"], ["normal", "Normal"], ["strong", "Strong"]], fx().strength || "normal", (v) => api.setFx("strength", v))));
@@ -834,7 +844,7 @@ function effectBody() {
     if (p && (adv || !p.what)) kids.push(promptGroup(e, st, p, adv));
   }
   if (P.canPaintIn(st) && !lib) kids.push(...howBlock(e, st));
-  if (adv && st.cost === "gen" && !lib) {
+  if (adv && !lib) {
     const f = fx(), keep = f.control_after_generate === "fixed";
     kids.push(h("div", { class: "field" }, h("div", { class: "label" }, "AI seed"),
       h("div", { class: "row gap" }, fxText("seed", "0", { label: "AI seed", num: true }),
@@ -873,7 +883,8 @@ function liveBlock(e, adv, st) {
     + `${hd.mode === "hold" ? `${fmtSec(hd.n / hd.fps)} on frame ${hd.frame + 1}` : `${hd.n} frames`} · ${((ls.server?.total ?? ls.ms) / 1000).toFixed(1)} s.`));
   if (mine && ls.status === "ready") {
     for (const [cls, text] of LEFT_OUT) if ((ls.leftOut || []).some((x) => x.startsWith(cls))) kids.push(h("p", { class: "muted small" }, text));
-    kids.push(h("p", { class: "muted small" }, "How the AI turns them into sparks, smoke or flames shows only in the run."));
+    kids.push(h("p", { class: "muted small" }, st.cost === "gen" ? "How the AI turns them into sparks, smoke or flames shows only in the run."
+      : "Made by the particles alone: the run draws them as they show here."));
   }
   if (st.variant === "dissolve") {
     if (mine && ls.status === "ready") kids.push(h("p", { class: "muted small" }, "Dark where the object is gone: the run fills it with the scene."));

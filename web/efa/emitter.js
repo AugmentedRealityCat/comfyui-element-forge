@@ -2,6 +2,7 @@ import { h, fmtSec } from "./ui/lib.js";
 import * as S from "./ui/state.js";
 import { previewSimLook } from "./ui/stage.js";
 import { fillRows } from "./fill.js";
+import { styleDef, styleOf, DIRECT_LOOK } from "./ui/presets.js";
 
 export const FOLLOW_STRENGTH = "Follows motion: strength";
 export const FOLLOW_LAG = "Follows motion: lag";
@@ -11,7 +12,6 @@ export const AREA = "Particle area";
 export const AI_GUIDE = "Guide for the AI (particles / drawn path / object shape / none)";
 export const GUIDE_STRENGTH = "Guide strength (on black)";
 export const ALSO_DRAW = "Particles: also draw (over the AI element)";
-const DIRECT_LOOK = "Particles: direct look (no LTX, pro)";
 export const DISSOLVE_BG = "Dissolve: background behind the object (auto / smooth / structured)";
 export const PANEL_ADV = [FOLLOW_STRENGTH, FOLLOW_LAG, PREMASK, SHAPE, AREA, GUIDE_STRENGTH, ALSO_DRAW, DISSOLVE_BG];
 
@@ -23,9 +23,7 @@ export function emitterKind(st) {
 }
 export const guideStyle = (st) => emitterKind(st) === "ltx" && st.variant !== "climb";
 export const guideNow = (st, e) => e?.adv?.[AI_GUIDE] || st?.settings?.[AI_GUIDE] || "none";
-export const effStyle = (st, e) => (st && e?.adv?.Particles && !st.settings?.Particles
-  ? { ...st, settings: { ...st.settings, Particles: true, "Particle preset": e.adv["Particle preset"] || st.guide_particles }, guided_by: "particles" }
-  : st);
+export const effStyle = (st, e) => (e && st && st === styleDef(e.kind, e.style) ? styleOf(e) : st);
 export function ownValues(f) {
   try {
     const o = JSON.parse(f?.emitter_values || "{}");
@@ -164,7 +162,7 @@ const EXPL = {
 
 const GUIDES = [["none", "Free"], ["object shape", "Object shape"], ["drawn path", "Drawn path"], ["particles", "Particles"]];
 const GUIDE_PRESETS = ["fire", "embers", "sparks", "grinding sparks", "smoke", "dust burst", "magic dust", "aura", "liquid", "debris",
-  "snow", "rain", "fireflies", "lightning", "cracks", "frost"];
+  "snow", "rain", "fireflies", "lightning", "cracks", "frost", "lightning climb", "energy A-B"];
 const GUIDE_EXPL = {
   none: "The AI paints the element freely from the prompt.",
   "object shape": "The AI shapes the element to the object it sits on (a flame wraps round the fist): the object's depth guides it, only near the object. Needs the object: click it in Position.",

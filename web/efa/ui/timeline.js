@@ -57,7 +57,7 @@ function startDrag(ev, kind, e, extra = {}) {
   if (kind === "head") onMove(ev);
 }
 function costOf(kind, e) {
-  const st = P.styleDef(e.kind, e.style);
+  const st = P.styleOf(e);
   if (!st) return "";
   if (kind === "fin" || kind === "fout") return "instant";
   if (st.dir === "dissolve") return "needs a new run";

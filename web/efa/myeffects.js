@@ -4,7 +4,7 @@ import { FOLLOW_STRENGTH, FOLLOW_LAG, PREMASK, GUIDE_STRENGTH } from "./emitter.
 
 export const DIR = "element-forge/my-effects";
 export const WIDGETS = ["mode", "strength", "describe", "look_words", "motion_words", "contact_words", "prompt_override",
-  "how_it_goes_in", "particle_seed", "preroll", "emitter_values", "guide", "guide_particles", "keep_original"];
+  "how_it_goes_in", "particle_seed", "preroll", "emitter_values", "guide", "guide_particles", "keep_original", "made_by"];
 export const ADV = [FOLLOW_STRENGTH, FOLLOW_LAG, PREMASK, GUIDE_STRENGTH];
 
 let store = null, render = () => {};

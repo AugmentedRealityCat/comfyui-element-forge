@@ -1,7 +1,7 @@
 import { h, clamp } from "./lib.js";
 import { icon } from "./icons.js";
 import * as S from "./state.js";
-import { styleDef, directionWords, naturalDir } from "./presets.js";
+import { styleDef, styleOf, directionWords, naturalDir } from "./presets.js";
 import { frameBox, genSize, genWindow, usesGuide, inWindow } from "./run.js";
 import { PostRenderer } from "./post.js";
 import { LiveSim, blendCss } from "./livesim.js";
@@ -40,7 +40,7 @@ const now = () => playhead();
 const fpsOf = () => clip()?.fps || 25;
 const clip = () => S.getShot().clip;
 const eff = () => S.activeEffect();
-const st = () => { const e = eff(); return e && styleDef(e.kind, e.style); };
+const st = () => { const e = eff(); return e && styleOf(e); };
 
 const toScreen = (p) => ({ x: view.x + p.x * view.s, y: view.y + p.y * view.s });
 const toClip = (sx, sy) => ({ x: (sx - view.x) / view.s, y: (sy - view.y) / view.s });

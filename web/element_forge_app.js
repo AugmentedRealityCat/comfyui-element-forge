@@ -83,6 +83,7 @@ export function buildContext(fx, clipName) {
     word: fx.object_word || "",
     adv,
     guideParticles: fx.guide_particles && fx.guide_particles !== "style default" ? String(fx.guide_particles) : null,
+    madeBy: fx.made_by === "ai" || fx.made_by === "particles" ? fx.made_by : null,
     clip: clipName ? { name: String(clipName) } : null,
   };
 }
