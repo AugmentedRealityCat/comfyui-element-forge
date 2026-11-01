@@ -662,7 +662,7 @@ function nudge(ev) {
       if (!p) return;
       e.where[sel] = { x: Math.round(p.x + dx), y: Math.round(p.y + dy) };
     }
-    if (sel === "box" && styleDef(e.kind, e.style)?.placement !== "ab") {
+    if (sel === "box" && styleOf(e)?.placement !== "ab") {
       const b = boxOf(e);
       if (b) e.box = { ...b, x: b.x + dx, y: b.y + dy };
     }
@@ -1210,7 +1210,7 @@ function autoHint() {
   if (S.ui.tool === "brush" && paintTarget()) return setHint(paintTarget() === "mask" ? "Paint over the object on the first frame (Alt: erase, [ ]: brush size)"
     : "Draw the path the effect follows, on the first frame (Alt: erase)");
   if (S.ui.tool === "pick" && isLive()) return setHint("Click a colour in your clip: the effect, its light and glow take it on");
-  if (S.ui.step === "where" && e && !e.where.a) return setHint("Click the object or the place for the effect");
+  if (S.ui.step === "where" && e && !e.where.a && s?.placement !== "frame") return setHint("Click the object or the place for the effect");
   if (S.ui.step === "where" && S.ui.maskTool && e?.where.a && maskPointCount(e) && !atMaskFrame(e)) {
     return setHint(`The mask's points are on frame ${maskFrame(e)}: go there (Position → Go there) or clear them to start here`);
   }

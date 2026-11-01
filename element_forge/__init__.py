@@ -14,7 +14,7 @@ from .compositing.place import EFAnchor, EFMaskTrack, EFPlaceBetween, EFPlaceEle
 from .tracking.motion import EFMotionTracks
 from .tracking.track import EFEffectLayer, EFPlaceLayer, EFTrackROI
 from .generation.elements import EFLoadElement, EFSaveElement
-from .generation.guides import EFGuide, EFGuideChoice
+from .generation.guides import EFGuide, EFGuideChoice, EFPlacement
 from .workflow.timing import EFMarginMask, EFPoints, EFStartAt, EFTrackPreview, EFVideoLatentMask
 from .simulation.particles_node import EFParticles, EFParticleSettings
 from .simulation.particle_depth_node import EFParticleDepthGuides
@@ -79,6 +79,7 @@ NODE_CLASS_MAPPINGS = {
     "EFLoadElement": EFLoadElement,
     "EFGuide": EFGuide,
     "EFGuideChoice": EFGuideChoice,
+    "EFPlacement": EFPlacement,
     "EFStartAt": EFStartAt,
     "EFPoints": EFPoints,
     "EFVideoLatentMask": EFVideoLatentMask,
@@ -135,6 +136,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "EFLoadElement": "Element Forge · Load Element",
     "EFGuide": "Element Forge · Guide",
     "EFGuideChoice": "Element Forge · Guide Choice",
+    "EFPlacement": "Element Forge · Placement",
     "EFStartAt": "Element Forge · Start At",
     "EFPoints": "Element Forge · Points",
     "EFVideoLatentMask": "Element Forge · Video Latent Mask",

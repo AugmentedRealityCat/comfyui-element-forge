@@ -1,10 +1,12 @@
 import hashlib
 import json
 import math
+from decimal import ROUND_HALF_UP, Decimal
 import re
 
 MAX_FRAMES = 161
 INPAINT = "Inpaint (off = on black)"
+CRUMBLE = "Object crumbles under the effect (the dissolve is the plate)"
 STRENGTH = {"subtle": "subtle, small and delicate", "strong": "large, intense and dramatic"}
 DIRECTIONS = ["upward", "up and to the right", "to the right", "down and to the right", "downward", "down and to the left",
               "to the left", "up and to the left"]
@@ -18,7 +20,7 @@ def js_round(v):
 
 
 def fixed(v, n=3):
-    return float(f"{v:.{n}f}")
+    return float(Decimal(v).quantize(Decimal(1).scaleb(-n), rounding=ROUND_HALF_UP))
 
 
 def clamp(v, a, b):
@@ -41,10 +43,39 @@ def style_def(presets, kind, style):
 DIRECT_LOOK = "Particles: direct look (no LTX, pro)"
 
 
+PLACEMENT = "Placement (auto / point / area / object / frame / between)"
+PL_OF = {"point": "point", "window": "area", "object": "object", "frame": "frame", "ab": "between"}
+PL_TO = {"point": "point", "area": "window", "object": "object", "frame": "frame", "between": "ab"}
+PL_SHAPE = {"frame": "whole frame", "object": "object mask", "between": "line A-B"}
+
+
+def with_place(st, effect):
+    a = effect.get("adv") or {}
+    side = a.get("Emitter side")
+    if side and (st.get("variant") or "app") == "app" and side != ((st.get("settings") or {}).get("Emitter side") or "bottom"):
+        st = {**st, "settings": {**(st.get("settings") or {}), "Emitter side": side}}
+    want = a.get(PLACEMENT)
+    if not want or (st.get("variant") or "app") != "app" or want == PL_OF.get(st.get("placement"), "point") or want not in PL_TO:
+        return st
+    s0 = st.get("settings") or {}
+    sets = dict(s0)
+    if not a.get("Particle emitter"):
+        if want in PL_SHAPE:
+            sets["Particle emitter"] = PL_SHAPE[want]
+        elif s0.get("Particle emitter") in ("whole frame", "line A-B", "object mask", "object contour", "object bottom edge"):
+            sets.pop("Particle emitter", None)
+    if want == "frame":
+        sets["Sticks to scene (off = object)"] = s0.get("Sticks to scene (off = object)", True)
+    if want == "between":
+        sets["Window A-B automatic"] = True
+    return {**st, "placement": PL_TO[want], "settings": sets}
+
+
 def style_of(presets, effect):
     st = style_def(presets, effect["kind"], effect["style"])
     if not st:
         return st
+    st = with_place(st, effect)
     a, s0 = effect.get("adv") or {}, st.get("settings") or {}
     parts = bool(a["Particles"] if "Particles" in a else s0.get("Particles"))
     direct = bool(a[DIRECT_LOOK] if DIRECT_LOOK in a else s0.get(DIRECT_LOOK))
@@ -302,6 +333,11 @@ def values_for(presets, effect, shot, scale=1.0):
             end = min(clip["seconds"], MAX_FRAMES / clip["fps"])
         v["Dissolve duration (s)"] = fixed(max(0.2, end - (timing.get("start") or 0)), 2)
         v["Dissolve direction (0 up, 90 right)"] = effect["dir"] if effect.get("dir") is not None else 90
+    if st.get("dir") != "dissolve" and (effect.get("adv") or {}).get(CRUMBLE):
+        end = timing.get("end")
+        if end is None:
+            end = min(clip["seconds"], MAX_FRAMES / clip["fps"])
+        v["Dissolve duration (s)"] = fixed(max(0.2, end - (timing.get("start") or 0)), 2)
     if sets.get("Particles") and pl != "ab" and st.get("dir") != "dissolve" and effect.get("dir") is not None:
         v["Particle direction (-1 = preset)"] = js_round(effect["dir"])
     if effect.get("depth"):
@@ -319,6 +355,8 @@ def values_for(presets, effect, shot, scale=1.0):
             v["Shot description (Inpaint)"] = shot["scene"].strip()
     v["Seed"] = effect["seed"]
     v.update(effect.get("adv") or {})
+    if (st.get("variant") or "app") != "app":
+        v.pop(PLACEMENT, None)
     return v
 
 

@@ -257,6 +257,34 @@ def to_crop(frames, crop, n):
 GUIDES = ["particles", "drawn path", "object shape", "none"]
 
 
+PLACEMENTS = ("auto", "point", "area", "object", "frame", "between")
+
+
+class EFPlacement:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "placement": ("STRING", {"default": "auto", "tooltip": "auto / point / area / object / frame / between"}),
+            "guided": ("BOOLEAN", {"default": False, "tooltip": "A guide image or the motion path runs (Guide or motion?)."}),
+            "has_b": ("BOOLEAN", {"default": False, "tooltip": "Point B is set."}),
+        }}
+
+    RETURN_TYPES = ("BOOLEAN", "BOOLEAN")
+    RETURN_NAMES = ("in_window", "between")
+    FUNCTION = "choose"
+    CATEGORY = "Element Forge/Guides"
+    DESCRIPTION = ("Where the element goes: in_window = made in a window (an area, on the object, the whole frame, or at a point "
+                   "with a guide); between = stretched from point A to point B. auto keeps the rule from the guide and point B.")
+
+    def choose(self, placement, guided, has_b):
+        p = str(placement or "auto").strip().lower() or "auto"
+        if p not in PLACEMENTS:
+            raise ValueError(f"EF Placement: unknown placement '{placement}' (known: {', '.join(PLACEMENTS)}).")
+        if p == "auto":
+            return (bool(guided), bool(has_b))
+        return (bool(guided) or p in ("area", "object", "frame"), p == "between" and bool(has_b))
+
+
 class EFGuideChoice:
     @classmethod
     def INPUT_TYPES(s):

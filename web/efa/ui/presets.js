@@ -9,9 +9,36 @@ export const presets = () => data;
 export const effectDef = (kind) => data?.effects.find((e) => e.id === kind) || null;
 export const styleDef = (kind, style) => effectDef(kind)?.styles.find((s) => s.id === style) || null;
 export const DIRECT_LOOK = "Particles: direct look (no LTX, pro)";
+export const PLACEMENT = "Placement (auto / point / area / object / frame / between)";
+export const PLACES = [["point", "Point", "At point A: the element stands on it"], ["area", "Area", "In a frame around point A that you size"],
+  ["object", "Object", "On the whole clicked object"], ["frame", "Frame", "Over the whole picture"],
+  ["between", "A–B", "From point A to point B (Shift-click B)"]];
+const PL_OF = { point: "point", window: "area", object: "object", frame: "frame", ab: "between" };
+const PL_TO = { point: "point", area: "window", object: "object", frame: "frame", between: "ab" };
+const PL_SHAPE = { frame: "whole frame", object: "object mask", between: "line A-B" };
+export const placeFixed = (st) => !st || (st.variant || "app") !== "app";
+export const placeOwn = (st) => PL_OF[st?.placement] || "point";
+export const placeOf = (e, st) => (placeFixed(st) ? placeOwn(st) : e?.adv?.[PLACEMENT] || placeOwn(st));
+export const SIDE = "Emitter side";
+export const sideOf = (e, st) => e?.adv?.[SIDE] || st?.settings?.[SIDE] || "bottom";
+function withPlace(st, e) {
+  const side = e?.adv?.[SIDE];
+  if (side && !placeFixed(st) && side !== (st.settings?.[SIDE] || "bottom")) st = { ...st, settings: { ...st.settings, [SIDE]: side } };
+  const want = e?.adv?.[PLACEMENT];
+  if (!want || placeFixed(st) || want === placeOwn(st) || !PL_TO[want]) return st;
+  const s0 = st.settings || {}, sets = { ...s0 };
+  if (!e.adv?.["Particle emitter"]) {
+    if (PL_SHAPE[want]) sets["Particle emitter"] = PL_SHAPE[want];
+    else if (["whole frame", "line A-B", "object mask", "object contour", "object bottom edge"].includes(s0["Particle emitter"])) delete sets["Particle emitter"];
+  }
+  if (want === "frame") sets["Sticks to scene (off = object)"] = s0["Sticks to scene (off = object)"] ?? true;
+  if (want === "between") sets["Window A-B automatic"] = true;
+  return { ...st, placement: PL_TO[want], settings: sets };
+}
 export function styleOf(e) {
-  const st = e ? styleDef(e.kind, e.style) : null;
-  if (!st) return st;
+  const st0 = e ? styleDef(e.kind, e.style) : null;
+  if (!st0) return st0;
+  const st = withPlace(st0, e);
   const a = e.adv || {}, s0 = st.settings || {};
   const parts = !!(a.Particles ?? s0.Particles), direct = !!(a[DIRECT_LOOK] ?? s0[DIRECT_LOOK]);
   const preset = a["Particle preset"] || s0["Particle preset"];

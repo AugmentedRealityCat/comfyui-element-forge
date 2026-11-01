@@ -83,7 +83,7 @@
 .efa-root .btn.small { height: 28px; padding: 0 10px; font-size: 12px; }
 .efa-root .label { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
 .efa-root .lead { margin: 0; color: var(--text); }
-.efa-root .field { display: grid; gap: 0; }
+.efa-root .field { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
 .efa-root .field.stack { gap: 12px; }
 .efa-root .field.stack > .label { margin-bottom: 0; }
 .efa-root .field.mask { gap: 6px; }

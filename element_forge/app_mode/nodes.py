@@ -25,6 +25,15 @@ PARTICLE_EMITTER = "Particle emitter (app, JSON)"
 DISSOLVE_EXTRA = "Dissolve extra (JSON)"
 AI_GUIDE = "Guide for the AI (particles / drawn path / object shape / none)"
 GUIDE_CHOICES = ["style default", "none", "object shape", "drawn path", "particles"]
+PLACEMENT = "Placement (auto / point / area / object / frame / between)"
+PLACE_CHOICES = ["style default", "point", "area", "object", "frame", "between"]
+PL_OF = {"point": "point", "window": "area", "object": "object", "frame": "frame", "ab": "between"}
+PL_SHAPE = {"frame": "whole frame", "object": "object mask", "between": "line A-B"}
+OBJECT_SHAPES = ("whole frame", "line A-B", "object mask", "object contour", "object bottom edge")
+SIDE = "Emitter side"
+CRUMBLE = "Object crumbles under the effect (the dissolve is the plate)"
+CRUMBLE_STYLE = "Dissolve style (plain / fire (LTX) / gold dust)"
+CRUMBLE_DIR = "Dissolve direction (0 up, 90 right)"
 GUIDE_PRESETS = ["fire", "embers", "sparks", "grinding sparks", "smoke", "dust burst", "magic dust", "aura", "liquid", "debris",
                  "snow", "rain", "fireflies", "lightning", "cracks", "frost", "lightning climb", "energy A-B"]
 
@@ -88,6 +97,20 @@ def load_guide_particles():
 
 
 GUIDE_PARTICLES = load_guide_particles()
+
+
+def load_style_variants():
+    for path in _preset_candidates():
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            return {f"{e['id']}/{s['id']}": s["variant"] for e in data.get("effects", []) for s in e.get("styles", []) if s.get("variant")}
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+    return {}
+
+
+VARIANTS = load_style_variants()
 
 
 def load_style_settings():
@@ -189,6 +212,17 @@ class EFAppEffect:
                 "made_by": (["style default", "ai", "particles"], {"default": "style default",
                     "tooltip": "ai: the AI makes the element (particles, if any, guide it). particles: the particles "
                                "alone, drawn without an AI run. Style default = as the style has it."}),
+                "placement": (PLACE_CHOICES, {"default": "style default",
+                    "tooltip": "point: stands on point A. area: in the frame around A. object: on the whole clicked object. "
+                               "frame: over the whole picture. between: from A to B. Style default = as the style has it."}),
+                "sits_on": (["style default", "bottom", "centre"], {"default": "style default",
+                    "tooltip": "At a point: the element's bottom edge stands on A, or its centre is on A."}),
+                "crumble": ("BOOLEAN", {"default": False,
+                    "tooltip": "The clicked object falls apart into particles under the effect, the scene behind it appears."}),
+                "crumble_look": (["plain", "gold dust", "fire (LTX)"], {"default": "plain",
+                    "tooltip": "plain: pieces in the object's colours. gold dust: glowing pieces. fire (LTX): embers painted by the AI."}),
+                "crumble_direction": ("INT", {"default": 90, "min": 0, "max": 359,
+                    "tooltip": "Which way the object crumbles (0 up, 90 right)."}),
             }
         }
 
@@ -295,6 +329,24 @@ def apply_effect(values, effect):
         out[DIRECT_LOOK] = False
     if pp != "style default" and (out.get("Particles") or own.get("Particles")):
         out["Particle preset"] = pp
+    if style not in VARIANTS or VARIANTS.get(style) == "app":
+        want = str(effect.get("placement") or "style default")
+        if want != "style default" and want != PL_OF.get(PLACEMENTS.get(style), "point"):
+            out[PLACEMENT] = want
+            if out.get("Particle emitter") == own.get("Particle emitter"):
+                if want in PL_SHAPE:
+                    out["Particle emitter"] = PL_SHAPE[want]
+                elif own.get("Particle emitter") in OBJECT_SHAPES:
+                    out.pop("Particle emitter", None)
+            if want == "between":
+                out["Window A-B automatic"] = True
+        side = str(effect.get("sits_on") or "style default")
+        if side != "style default":
+            out[SIDE] = side
+    if effect.get("crumble") and not style.startswith("dissolve/"):
+        out[CRUMBLE] = True
+        out[CRUMBLE_STYLE] = str(effect.get("crumble_look") or "plain")
+        out[CRUMBLE_DIR] = int(effect.get("crumble_direction", 90))
     return out
 
 

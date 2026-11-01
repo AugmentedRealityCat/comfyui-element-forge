@@ -106,6 +106,7 @@ export function flushTyped() {
 const fx = () => api?.fx?.() || {};
 const effect = () => S.activeEffect();
 const style = () => { const e = effect(); return e ? P.styleDef(e.kind, e.style) : null; };
+const placed = () => { const e = effect(); return e ? P.styleOf(e) : null; };
 const needsPoint = (st) => !!st && st.placement !== "frame";
 const lightDefault = (st, key) => st?.settings?.[key] ?? true;
 const wordOf = () => String(typed.get("object_word")?.value ?? fx().object_word ?? "").trim();
@@ -117,7 +118,7 @@ function stepState(id) {
   const shot = S.getShot(), e = effect(), st = style();
   if (id === "clip") return shot.clip ? "done" : "todo";
   if (!shot.clip) return "locked";
-  if (id === "position") return !needsPoint(st) || e?.where.a ? "done" : "todo";
+  if (id === "position") return !needsPoint(placed()) || e?.where.a ? "done" : "todo";
   if (id === "effect") return st ? "done" : "todo";
   if (!st) return id === "output" ? "todo" : "locked";
   if (id === "finish") return "todo";
@@ -134,7 +135,7 @@ function summary(id) {
   if (id === "clip") return shot.clip ? `${shot.clip.name} · ${fmtSec(shot.clip.seconds)}` : "";
   if (!e || !st) return "";
   if (id === "position") {
-    if (!needsPoint(st)) return "Whole picture";
+    if (!needsPoint(placed())) return "Whole picture";
     if (!e.where.a) return "";
     return [(wordOf() ? `“${wordOf()}”` : "Point set") + (e.where.b ? " · A → B" : ""), followsName(ownFollows() || styleFollows(st))].join(" · ");
   }
@@ -612,7 +613,7 @@ function objectGroup() {
   ], { open: !!(set || f.object_in_front), hint: word ? `“${word}”` : f.own_mask ? "painted" : masked ? "mask set" : f.object_in_front ? "in front" : "optional" });
 }
 function positionBody() {
-  const e = effect(), st = style(), shot = S.getShot();
+  const e = effect(), st = placed(), shot = S.getShot();
   if (!e || !st) return [h("p", { class: "muted" }, "Loading the effects…")];
   const kids = [h("p", { class: "muted small" }, PLACE_HINT[st.placement] || PLACE_HINT.point)];
   if (!needsPoint(st)) return kids;
@@ -831,6 +832,29 @@ function libraryBlock(e, st) {
       link("Look again", () => { library = null; loadLibrary(); })));
   return kids.filter(Boolean);
 }
+const PLACE_LINE = {
+  point: "Stands on point A and follows it. Size it with its frame in the canvas.",
+  area: "Made in the frame around point A: drag its corners in the canvas.",
+  object: "Covers the clicked object and moves with it: track the object in Position.",
+  frame: "Over the whole picture, no point needed.",
+  between: "Stretches from point A to point B: Shift-click B in the canvas.",
+};
+function placeBlock(e, st) {
+  if (P.placeFixed(st)) return [];
+  const own = P.placeOwn(st), cur = P.placeOf(e, st);
+  const out = [h("div", { class: "field" }, h("div", { class: "label" }, "Placement"),
+    seg("Placement", P.PLACES.map(([k, t, tip]) => [k, t, k === own ? `${tip} · as the style has it` : tip]), cur,
+      (v) => setAdv(P.PLACEMENT, v === own ? undefined : v)),
+    h("p", { class: "muted small" }, PLACE_LINE[cur]))];
+  if (cur === "point") {
+    const side0 = st.settings?.[P.SIDE] || "bottom", side = P.sideOf(e, st);
+    out.push(h("div", { class: "field" }, h("div", { class: "label" }, "Sits on A by"),
+      seg("Sits on A by", [["bottom", "Bottom", "Its bottom edge stands on A (a flame, a plant)"], ["centre", "Centre", "Its middle is on A (a glow, a swirl)"]]
+        .map(([k, t, tip]) => [k, t, k === side0 ? `${tip} · as the style has it` : tip]), side === "centre" ? "centre" : "bottom",
+      (v) => setAdv(P.SIDE, v === side0 ? undefined : v))));
+  }
+  return out;
+}
 function howBlock(e, st) {
   const f = fx();
   const how = f.how_it_goes_in && f.how_it_goes_in !== "style default" ? f.how_it_goes_in : (st.settings?.[P.INPAINT] ? "inpaint" : "overlay");
@@ -840,7 +864,7 @@ function howBlock(e, st) {
   if (how === "inpaint") {
     kids.push(sentenceField());
     if (fx().mode === "advanced") kids.push(keepRow());
-    if (st.placement === "ab" && !wordOf()) kids.push(note("hint", "Painted in between two points, the track holds better with a word for the objects. ",
+    if (P.styleOf(e)?.placement === "ab" && !wordOf()) kids.push(note("hint", "Painted in between two points, the track holds better with a word for the objects. ",
       link("Name them in Position", () => { groups.set("object", true); setOpen("position"); })));
   }
   return kids;
@@ -903,8 +927,9 @@ function effectBody() {
     ...(exp.length ? [h("p", { class: "muted small styles-sub", title: "Not tested by us yet" }, "Experimental · results may vary"), ...exp.map(styleButton)] : [])));
   if (!st) return kids;
   if (st.prompt_tested === false) kids.push(note("hint", EXPERIMENTAL));
-  kids.push(...positionHints(e, st));
+  kids.push(...positionHints(e, placed()));
   kids.push(...libraryBlock(e, st));
+  kids.push(...placeBlock(e, st));
   const lib = P.fromLibrary(e) || (!!e.adv?.[P.LIBRARY] && canUseLibrary(e, st));
   if (!lib) {
     const p = P.promptOf(e);

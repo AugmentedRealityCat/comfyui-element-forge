@@ -1,6 +1,6 @@
 import * as S from "./state.js";
 import * as C from "./comfy.js";
-import { styleDef, styleOf, composePrompt, inScene, inpaintSettings, objectWord, INPAINT, fromLibrary } from "./presets.js";
+import { styleDef, styleOf, composePrompt, inScene, inpaintSettings, objectWord, INPAINT, fromLibrary, placeFixed, PLACEMENT } from "./presets.js";
 import { clamp, store, uid } from "./lib.js";
 import { ltxForBuild } from "./machine.js";
 
@@ -155,6 +155,10 @@ export function valuesFor(effect, shot, scale = 1) {
     v["Dissolve duration (s)"] = +Math.max(0.2, end - (effect.timing.start || 0)).toFixed(2);
     v["Dissolve direction (0 up, 90 right)"] = effect.dir ?? 90;
   }
+  if (st.dir !== "dissolve" && effect.adv?.["Object crumbles under the effect (the dissolve is the plate)"]) {
+    const end = effect.timing.end ?? Math.min(clip.seconds, 161 / clip.fps);
+    v["Dissolve duration (s)"] = +Math.max(0.2, end - (effect.timing.start || 0)).toFixed(2);
+  }
   if (st.settings?.Particles && st.placement !== "ab" && st.dir !== "dissolve" && effect.dir != null) v["Particle direction (-1 = preset)"] = Math.round(effect.dir);
   if (effect.depth) {
     const key = st.settings?.Particles ? "Particle depth offset" : "Depth offset (+ = element nearer, less hidden)";
@@ -169,6 +173,7 @@ export function valuesFor(effect, shot, scale = 1) {
   }
   v["Seed"] = effect.seed.mode === "keep" && effect.seed.value != null ? effect.seed.value : Math.floor(Math.random() * 2 ** 31);
   Object.assign(v, effect.adv || {});
+  if (placeFixed(st)) delete v[PLACEMENT];
   if (st.settings?.Particles && v["Particle emitter"] === "area" && effect.box) {
     const b = effect.box;
     v["Particle area"] = [b.x / clip.width, b.y / clip.height, (b.x + b.w) / clip.width, (b.y + b.h) / clip.height]

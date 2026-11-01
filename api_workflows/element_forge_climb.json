@@ -3404,7 +3404,7 @@
     0
    ],
    "on_false": [
-    "160",
+    "952",
     0
    ],
    "on_true": [
@@ -3946,7 +3946,7 @@
   "class_type": "EFPlaceElement",
   "inputs": {
    "plate": [
-    "169",
+    "942",
     0
    ],
    "element": [
@@ -3986,7 +3986,7 @@
     0
    ],
    "object_mask": [
-    "906",
+    "943",
     0
    ],
    "object_in_front": [
@@ -4024,7 +4024,7 @@
   "class_type": "EFPlaceLayer",
   "inputs": {
    "plate": [
-    "169",
+    "942",
     0
    ],
    "layer_linear": [
@@ -4047,7 +4047,7 @@
   "class_type": "EFPlaceLayer",
   "inputs": {
    "plate": [
-    "169",
+    "942",
     0
    ],
    "layer_linear": [
@@ -4144,7 +4144,7 @@
   "class_type": "EFPlaceBetween",
   "inputs": {
    "plate": [
-    "169",
+    "942",
     0
    ],
    "element": [
@@ -4276,7 +4276,7 @@
    ],
    "direct_look": true,
    "look_plate": [
-    "169",
+    "942",
     0
    ],
    "screen_fixed": [
@@ -4333,8 +4333,8 @@
     0
    ],
    "on_false": [
-    "108",
-    4
+    "952",
+    1
    ],
    "on_true": [
     "232",
@@ -4343,6 +4343,35 @@
   },
   "_meta": {
    "title": "B stretches the element? (not with particles)"
+  }
+ },
+ "951": {
+  "class_type": "PrimitiveString",
+  "inputs": {
+   "value": "auto"
+  },
+  "_meta": {
+   "title": "Placement (auto / point / area / object / frame / between)"
+  }
+ },
+ "952": {
+  "class_type": "EFPlacement",
+  "inputs": {
+   "placement": [
+    "951",
+    0
+   ],
+   "guided": [
+    "160",
+    0
+   ],
+   "has_b": [
+    "108",
+    4
+   ]
+  },
+  "_meta": {
+   "title": "Placement: in a window? from A to B?"
   }
  },
  "349": {
@@ -5351,7 +5380,7 @@
   "class_type": "EFPlaceLayer",
   "inputs": {
    "plate": [
-    "169",
+    "942",
     0
    ],
    "layer_linear": [
@@ -5379,7 +5408,7 @@
   "class_type": "EFPlaceLayer",
   "inputs": {
    "plate": [
-    "169",
+    "942",
     0
    ],
    "layer_linear": [
@@ -5561,7 +5590,7 @@
   "class_type": "EFDepthLight",
   "inputs": {
    "plate": [
-    "169",
+    "942",
     0
    ],
    "layer_plate_linear": [
@@ -5610,7 +5639,7 @@
     1
    ],
    "plate": [
-    "169",
+    "942",
     0
    ],
    "radius": 3,
@@ -7964,7 +7993,7 @@
   "class_type": "EFObjectProtection",
   "inputs": {
    "object_mask": [
-    "906",
+    "943",
     0
    ],
    "grow_pixels": 1,
@@ -8018,7 +8047,7 @@
   "class_type": "EFPlaceLayer",
   "inputs": {
    "plate": [
-    "169",
+    "942",
     0
    ],
    "layer_linear": [
@@ -8085,7 +8114,7 @@
   "class_type": "EFPlaceLayer",
   "inputs": {
    "plate": [
-    "169",
+    "942",
     0
    ],
    "layer_linear": [
@@ -8160,6 +8189,55 @@
   },
   "_meta": {
    "title": "Base locked to the point (no jitter of the base)"
+  }
+ },
+ "941": {
+  "class_type": "PrimitiveBoolean",
+  "inputs": {
+   "value": false
+  },
+  "_meta": {
+   "title": "Object crumbles under the effect (the dissolve is the plate)"
+  }
+ },
+ "942": {
+  "class_type": "ComfySwitchNode",
+  "inputs": {
+   "switch": [
+    "941",
+    0
+   ],
+   "on_false": [
+    "169",
+    0
+   ],
+   "on_true": [
+    "704",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Object crumbles under the effect?"
+  }
+ },
+ "943": {
+  "class_type": "ComfySwitchNode",
+  "inputs": {
+   "switch": [
+    "941",
+    0
+   ],
+   "on_false": [
+    "906",
+    0
+   ],
+   "on_true": [
+    "462",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "In front: what is left of the crumbling object?"
   }
  },
  "851": {

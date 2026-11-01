@@ -27,6 +27,10 @@ const variants = [
   { a: [500, 500], b: [900, 700], box: [420, 120, 333, 301.5] },
   { a: [400, 300], dir: 45, depth: 0.1, adv: { Particles: true, "Particles: direct look (no LTX, pro)": true, "Particle preset": "snow" } },
   { a: [400, 300], adv: { "Particles: direct look (no LTX, pro)": false } },
+  { a: [400, 300], adv: { [P.PLACEMENT]: "frame" } },
+  { a: [400, 300], box: [300, 200, 200, 200], adv: { [P.PLACEMENT]: "point", [P.SIDE]: "centre" } },
+  { a: [400, 300], b: [800, 600], adv: { [P.PLACEMENT]: "between", "Object crumbles under the effect (the dissolve is the plate)": true } },
+  { a: [400, 300], start: 0.4, adv: { [P.PLACEMENT]: "object", "Particle emitter": "area", "Object crumbles under the effect (the dissolve is the plate)": true } },
 ];
 const out = [];
 for (const e of presets.effects) for (const s of e.styles) for (const clip of clips) for (const [vi, v] of variants.entries()) {

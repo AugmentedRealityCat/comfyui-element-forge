@@ -172,6 +172,11 @@ Particle styles also ask where the particles start. Some need a click, others th
 - **Made by: Particles only**<br>Every style can be drawn by its particles alone, without an AI run, in about a minute. They start from the style's particles; in Advanced, **Particles** in the emitter's Source picks others (snow, sparks, smoke …).
 - **Made by: Library**<br>An element you kept with **Save the element** is placed again, without a new AI run. Position, size, light and glow follow this style; the words are not used. Only on black.
 
+### Placement
+
+- **Placement**<br>Basic and Advanced, every style except Dissolve and Climbs: where the element goes. **Point** stands on point A and follows it; **Area** makes it in the frame around A that you size in the canvas; **Object** covers the clicked object and moves with it; **Frame** puts it over the whole picture, no point needed; **A–B** stretches it from A to B (Shift-click B). The style's own placement is marked in the tooltip; choosing another one also starts the particles in that shape (the whole frame, the object, the line A–B) unless you set the shape yourself.
+- **Sits on A by**<br>With **Point**: the element's **Bottom** edge stands on A (a flame, a plant), or its **Centre** is on A (a glow, a swirl).
+
 ### Guide for the AI
 
 | Guide | What the AI does |
@@ -377,6 +382,8 @@ Shown in **Effect** in Advanced mode. Values left alone keep the style's tested 
 **Drawn for the AI as: Depth** gives the AI the clip's depth of the clicked object, with the particles' surfaces wherever they are in front of it: one guide from the same simulation. **Depth shows** picks the object or the whole scene (the AI may then redraw the background); **Object as** the whole object or only a thin **Inner edge** (width in pixels), so the AI follows the outline and builds less of a body. It needs the object's track; a bolt, a climb or cracks are drawn over it as lines.
 
 Lightning paths have their own look (width, glow, jaggedness, branches, new shape every few frames); Dissolve has its own emission, motion, particle and force controls.
+
+**Crumble** (every style except Dissolve): turn on **The object crumbles** and the clicked object falls apart into particles under the effect while the scene behind it appears, for example a statue that burns away while the flames rise. **Look** is *Crumbles* (the object's own colours), *Gold dust* or *Burns away* (embers painted by the AI); **Direction** is the way the pieces fly; **Background** fills the place behind it. The pieces keep values of their own (emission, motion, particle, forces) under **More**, so the falling stone and the rising flames do not share one gravity. The crumbling runs over the effect's time in the timeline. It is the clip under the effect, so it shows when this effect is the first in the list; the live preview shows the effect's particles, the crumbling shows after the run.
 
 <sub>[↑ Contents](#contents)</sub>
 

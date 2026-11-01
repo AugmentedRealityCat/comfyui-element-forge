@@ -53,6 +53,7 @@
 .efa-root .efa-cards .saved-track .badge { margin-left: 6px; }
 .efa-root .view-switch .exposure { margin-left: 6px; }
 .efa-root .efa-cards .field.emitter { gap: 6px; }
+.efa-root .efa-cards .em-notes > p { margin: 0 0 4px; }
 .efa-root .efa-cards .em-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .efa-root .efa-cards .fill-row { align-items: center; }
 .efa-root .efa-cards .fill-row .text { flex: 1 1 auto; min-width: 0; }

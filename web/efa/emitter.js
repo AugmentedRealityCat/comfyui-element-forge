@@ -14,6 +14,13 @@ export const GUIDE_STRENGTH = "Guide strength (on black)";
 export const ALSO_DRAW = "Particles: also draw (over the AI element)";
 export const DISSOLVE_BG = "Dissolve: background behind the object (auto / smooth / structured)";
 export const PANEL_ADV = [FOLLOW_STRENGTH, FOLLOW_LAG, PREMASK, SHAPE, AREA, GUIDE_STRENGTH, ALSO_DRAW, DISSOLVE_BG];
+export const CRUMBLE = "Object crumbles under the effect (the dissolve is the plate)";
+export const CRUMBLE_STYLE = "Dissolve style (plain / fire (LTX) / gold dust)";
+export const CRUMBLE_DIR = "Dissolve direction (0 up, 90 right)";
+export const CRUMBLE_VALUES = "Dissolve extra (JSON)";
+const CRUMBLE_KEYS = [CRUMBLE, CRUMBLE_STYLE, CRUMBLE_DIR, CRUMBLE_VALUES];
+const CRUMBLE_STYLES = [["plain", "Crumbles", "Pieces in the object's own colours"], ["gold dust", "Gold dust", "Glowing pieces"],
+  ["fire (LTX)", "Burns away", "Embers painted by the AI"]];
 
 export function emitterKind(st) {
   if (!st) return null;
@@ -220,6 +227,7 @@ const GUIDE_EXPL = {
 };
 
 function write(ctx, own) {
+  if (ctx.write) return ctx.write(own);
   const keys = Object.keys(own);
   ctx.api.setFx("emitter_values", keys.length ? JSON.stringify(own) : "");
 }
@@ -253,7 +261,7 @@ function numRow(ctx, c) {
     onchange: (ev) => { const v = +ev.target.value; if (Number.isFinite(v)) set(c.int ? Math.round(v) : v); } });
   const at = hi > lo ? Math.min(1, Math.max(0, (base - lo) / (hi - lo))) : 0;
   const tick = h("span", { class: "em-tick", title: `The style's value: ${r(base, 3)}`, style: { left: `calc(${at.toFixed(4)} * (100% - 14px) + 6px)` } });
-  const drawn = DRAWN.has(c.k2 || c.k) && !c.put;
+  const drawn = DRAWN.has(c.k2 || c.k) && !c.put && !ctx.write;
   const range = h("input", { type: "range", min: String(lo), max: String(hi), step: String(c.step), value: String(cur), "aria-label": c.label,
     oninput: (ev) => { num.value = r(+ev.target.value, 3); if (drawn) previewSimLook({ [c.k]: +ev.target.value }); },
     onchange: (ev) => set(c.int ? Math.round(+ev.target.value) : +ev.target.value) });
@@ -438,7 +446,7 @@ function changedCount(ctx) {
   let n = Object.keys(ctx.own).length;
   if (e.dir != null && !ctx.st.placement?.startsWith("ab")) n += Math.round(e.dir) !== Math.round(ctx.B?.direction ?? (ctx.kind === "dissolve" ? 90 : -1)) ? 1 : 0;
   if (e.depth) n += 1;
-  for (const k of [FOLLOW_STRENGTH, FOLLOW_LAG, PREMASK, GUIDE_STRENGTH, ALSO_DRAW, DISSOLVE_BG]) if (e.adv?.[k] != null) n += 1;
+  for (const k of [FOLLOW_STRENGTH, FOLLOW_LAG, PREMASK, GUIDE_STRENGTH, ALSO_DRAW, DISSOLVE_BG, ...(ctx.kind === "dissolve" ? [] : CRUMBLE_KEYS)]) if (e.adv?.[k] != null) n += 1;
   for (const w of ["guide", "guide_particles"]) if (ctx.f?.[w] && ctx.f[w] !== "style default") n += 1;
   return n;
 }
@@ -448,7 +456,7 @@ function resetAll(ctx) {
     if (ctx.kind === "dissolve") x.dir = 90; else x.dir = null;
     x.adv = { ...x.adv };
     if (x.adv[ALSO_DRAW] && !(ctx.st0 || ctx.st).settings?.Particles) { delete x.adv.Particles; delete x.adv["Particle preset"]; }
-    for (const k of [FOLLOW_STRENGTH, FOLLOW_LAG, PREMASK, GUIDE_STRENGTH, ALSO_DRAW, DISSOLVE_BG]) delete x.adv[k];
+    for (const k of [FOLLOW_STRENGTH, FOLLOW_LAG, PREMASK, GUIDE_STRENGTH, ALSO_DRAW, DISSOLVE_BG, ...(ctx.kind === "dissolve" ? [] : CRUMBLE_KEYS)]) delete x.adv[k];
   }, "emitter");
   ctx.api.setFx("emitter_values", "");
   for (const w of ["guide", "guide_particles"]) if (ctx.f?.[w] && ctx.f[w] !== "style default") ctx.api.setFx(w, "style default");
@@ -514,7 +522,53 @@ export function emitterPanel(ctx) {
     out.push(h("p", { class: "muted small em-unused" }, "The AI paints this element freely: the particles below come in when they guide it, are drawn over it (Source) or make it (Made by: Particles only). ",
       ui.link("Let them guide the AI", () => ctx.api.setFx("guide", guideDefault(ctx.st0 || st) === "particles" ? "style default" : "particles"))));
   }
-  return out.concat(fillRows(ctx, fillControls(ctx), (r) => applyFill(ctx, r)), particleGroups(ctx), pathGroup(ctx));
+  return out.concat(fillRows(ctx, fillControls(ctx), (r) => applyFill(ctx, r)), particleGroups(ctx), pathGroup(ctx), crumbleGroup(ctx));
+}
+
+const crumbleCache = new Map();
+function crumbleValues(style, extra) {
+  const k = JSON.stringify([style, extra]);
+  const got = crumbleCache.get(k);
+  if (got) return got.P ? got : null;
+  crumbleCache.set(k, { pending: true });
+  fetch("/element-forge/api/dissolve-values", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ style, extra }) })
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+    .then((d) => { crumbleCache.set(k, { P: d.params, B: d.base }); S.setUI({ crumbleValues: Date.now() }); })
+    .catch(() => crumbleCache.delete(k));
+  return null;
+}
+function crumbleGroup(ctx) {
+  const { e, ui } = ctx;
+  if (ctx.kind === "dissolve") return [];
+  const on = !!e.adv?.[CRUMBLE];
+  const head = ui.toggle("The object crumbles", on, (v) => setAdv(CRUMBLE, v || undefined),
+    "The clicked object falls apart into particles under the effect, and the scene behind it appears");
+  if (!on) return [box(ctx, "crumble", "Crumble", [head, h("p", { class: "muted small" }, "The object stays whole.")], [], "", "off")];
+  const style = e.adv?.[CRUMBLE_STYLE] || "plain", extra = e.adv?.[CRUMBLE_VALUES] || "";
+  let own = {};
+  try { own = JSON.parse(extra || "{}") || {}; } catch { own = {}; }
+  const v = crumbleValues(style, extra);
+  const cx = { ...ctx, P: v?.P, B: v?.B, own, write: (o) => setAdv(CRUMBLE_VALUES, Object.keys(o).length ? JSON.stringify(o) : undefined) };
+  const dir = e.adv?.[CRUMBLE_DIR] ?? 90;
+  const notes = [];
+  if (!e.where?.a) notes.push(h("p", { class: "muted small" }, "Needs the object: click it in Position. ", ui.link("Go to Position", () => ui.open("position"))));
+  if (S.getShot().effects.findIndex((x) => x.id === e.id) > 0) {
+    notes.push(h("p", { class: "muted small" }, "The crumbling is the clip under this effect, so it shows when this effect is the first in the list."));
+  }
+  const G = DISSOLVE;
+  const main = [head, notes.length ? h("div", { class: "em-notes" }, ...notes) : null,
+    h("div", { class: "em-row choice wide" + (style !== "plain" ? " changed" : ""), "data-key": "crumble-style" },
+      h("span", { class: "em-label" }, "Look"), ui.seg("Crumble look", CRUMBLE_STYLES, style, (s) => setAdv(CRUMBLE_STYLE, s === "plain" ? undefined : s)),
+      style !== "plain" ? h("button", { class: "em-reset", title: "Back to Crumbles", onclick: () => setAdv(CRUMBLE_STYLE, undefined) }, "×") : h("span", {})),
+    dialRow(ctx, "Direction", +dir, 90, (d) => setAdv(CRUMBLE_DIR, d == null || Math.round(d) === 90 ? undefined : Math.round(d)), "Which way the object crumbles"),
+    h("p", { class: "muted small" }, "Over the effect's time in the timeline. The live preview shows the effect's particles; the crumbling shows after the run."),
+    ...backgroundRows(ctx)];
+  const more = v ? [h("div", { class: "label sub" }, "Pieces"), ...rows(cx, G.emission.main), ...rows(cx, G.motion.main), ...rows(cx, G.particle.main),
+    hexRow(cx, "glow_color", "Glow colour"), h("div", { class: "label sub" }, "Forces"), ...rows(cx, G.forces.main),
+    ...rows(cx, [...G.emission.more, ...G.particle.more])] : [h("p", { class: "muted small" }, "Loading the values…")];
+  const n = Object.keys(own).length;
+  return [box(ctx, "crumble", "Crumble", main, more, "",
+    [pname(CRUMBLE_STYLES, style).toLowerCase(), `${Math.round(+dir)}°`, n ? `${n} own values` : null].filter(Boolean).join(" · "), "crumble")];
 }
 
 function particleGroups(ctx) {

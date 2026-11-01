@@ -526,6 +526,10 @@
     "mode"
    ]
   ],
+  "Placement (auto / point / area / object / frame / between)": [
+   "951",
+   "value"
+  ],
   "Inpaint key": [
    "397",
    "key"
@@ -619,6 +623,10 @@
   "Base locked to the point (no jitter of the base)": [
    "892",
    "value"
+  ],
+  "Object crumbles under the effect (the dissolve is the plate)": [
+   "941",
+   "value"
   ]
  },
  "groups": {
@@ -705,6 +713,7 @@
    234,
    235,
    236,
+   951,
    801,
    802,
    803,
@@ -747,7 +756,8 @@
    881,
    891,
    905,
-   892
+   892,
+   941
   ],
   "Stem: clip, depth, object, track": [
    166,
@@ -932,6 +942,7 @@
    346,
    347,
    348,
+   952,
    349,
    350,
    351,
@@ -1084,7 +1095,9 @@
    468,
    469,
    470,
-   882
+   882,
+   942,
+   943
   ],
   "App passes": [
    851,

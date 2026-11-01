@@ -1,7 +1,7 @@
 import { h, getJSON } from "./ui/lib.js";
 import { icon } from "./ui/icons.js";
 import * as S from "./ui/state.js";
-import { loadPresets, styleDef, startPreset, DIRECT_LOOK } from "./ui/presets.js";
+import { loadPresets, styleDef, styleOf, startPreset, DIRECT_LOOK } from "./ui/presets.js";
 import { efaValues, estimate, ltxFrames, RUN_STEPS, runStepOf } from "./ui/run.js";
 import { mountStage, render as renderCanvas, releaseMedia, restoreMedia, togglePlay, loadNav, wheelZooms, dragPans, presentResult } from "./ui/stage.js";
 import { mountTimeline } from "./ui/timeline.js";
@@ -301,7 +301,7 @@ function applyCtx(ctx) {
     e.prompt = ctx.prompt || null;
     if (ctx.seed) e.seed = { mode: ctx.seed.mode || "keep", value: ctx.seed.value ?? null };
     e.where.word = ctx.word || "";
-    const frame = styleDef(e.kind, e.style)?.placement === "frame";
+    const frame = styleOf(e)?.placement === "frame";
     const adv = { ...e.adv };
     for (const k of [...ALWAYS, ...ADV_ONLY, ...GUIDE_PARTS]) delete adv[k];
     for (const [k, v] of Object.entries(ctx.adv || {})) {

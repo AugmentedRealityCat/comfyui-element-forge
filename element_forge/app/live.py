@@ -731,6 +731,20 @@ async def ef_live(request):
     return resp
 
 
+@routes.post("/element-forge/api/dissolve-values")
+async def ef_dissolve_values(request):
+    body = await request.json()
+    try:
+        style, extra = str(body.get("style") or "plain"), str(body.get("extra") or "")
+        args = (1.0, 1.0, 1.0, 1.0, 0.5, 0.0, "#ff8c26", 1.0, 0.0, style)
+        base, _ = DS.node_params(*args, "", "auto")
+        now, _ = DS.node_params(*args, extra, "auto")
+    except (ValueError, KeyError, TypeError) as e:
+        return web.json_response({"error": str(e)}, status=400)
+    keep = lambda p: {k: v for k, v in {**DS.DEFAULTS, **p}.items() if isinstance(v, (int, float, str))}
+    return web.json_response({"params": keep(now), "base": keep(base)})
+
+
 @routes.post("/element-forge/api/live-values")
 async def ef_live_values(request):
     body = await request.json()

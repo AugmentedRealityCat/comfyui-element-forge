@@ -45,7 +45,7 @@ A prompt alone decides little: the AI guesses where the effect goes, how big it 
   <tr>
     <td width="50%" valign="top">
       <h3>Exactly where it belongs</h3>
-      <p>At a point, on an object, between two points or over the whole frame. The frame that is generated can be moved and sized <b>independently</b> of the point, so nothing is cut off.</p>
+      <p><b>Every style can go anywhere</b>: at a point (standing on it or centred), in an area you size, on the whole object, between two points or over the whole frame; the particles start in that shape. The frame that is generated can be moved and sized <b>independently</b> of the point, so nothing is cut off.</p>
     </td>
     <td width="50%" valign="top">
       <h3>Masks you can correct</h3>
@@ -53,6 +53,8 @@ A prompt alone decides little: the AI guesses where the effect goes, how big it 
     </td>
   </tr>
 </table>
+
+Effects combine with the object they touch: turn on <b>The object crumbles</b> and a statue falls apart into particles under its own flames, with the scene behind it filled in, and its pieces keep their own forces.
 
 Light, glow, colour, placement and timing stay adjustable <b>after the run, without generating again</b>, and every run is kept as a version to compare.
 
@@ -252,7 +254,7 @@ Element Forge has its own particle engine. It uses the clip's analysis, so parti
 | **Depth and contact** | Each particle has a depth in the scene. Nearer objects hide it, and where it meets a surface it can bounce, stick, slide or die. Rain and liquid drops splash on impact. |
 | **Look** | Sprites (soft, dot, flake, puff, wisp, streak, spark or chunk), colour and size over the particle's life, trails, motion blur, flicker and glow. **Merge into one body** blurs neighbouring particles together for liquid edges or fire tongues. |
 | **Paths** | Lightning is drawn as jagged, branching bolts that change shape every few frames. Climbing arcs run along the thin parts of an object. Cracks and frost grow across a surface. |
-| **Dissolve** | The object's mask crumbles into particles while the background behind it is filled in. |
+| **Dissolve** | The object's mask crumbles into particles while the background behind it is filled in. Any other effect can crumble its object too (**Crumble** in the emitter). |
 | **Seed** | The same particle seed gives the same particles in the live preview and in the run. **New seed** tries other particles with the same settings. |
 
 </details>
