@@ -90,4 +90,29 @@ st = cv.style_def(presets, "fire", "flame")
 moved = cv.with_place(st, {"adv": {cv.PLACEMENT: "frame"}})
 check(moved["placement"] == "frame" and moved["settings"].get("Particle emitter") == "whole frame", "the app moves a flame to the whole frame")
 check(cv.with_place(st, {"adv": {}}) is st, "nothing chosen: the style as it is")
+
+check(cv.colour_name("#3070ff") == "blue" and cv.colour_name("#ffffff") == "white", "a picked colour has the nearest named colour for the AI")
+check(cv.quick_words({"quick": {"colour": "#e8202a", "amount": "more", "size": "smaller"}}) == "mainly red, dense and abundant, small",
+      "colour, amount and size become words")
+fl = {"kind": "fire", "style": "flame", "where": {"a": {"x": 400, "y": 300}}, "dir": None, "depth": 0, "strength": "normal",
+      "text": {"what": "", "look": "", "motion": "", "contact": ""}, "prompt": None, "timing": {"start": 0, "end": None}, "seed": 1, "adv": {},
+      "box": None}
+shot = {"clip": {"name": "c.mp4", "width": 1920, "height": 1080, "frames": 90, "fps": 30, "seconds": 3}, "night": False, "scene": ""}
+plain = cv.values_for(presets, fl, shot)["Effect prompt"]
+fast = cv.values_for(presets, {**fl, "quick": {"speed": "faster"}}, shot)
+check("fast and energetic" in fast["Effect prompt"] and "fast and energetic" not in plain, "an AI flame gets the words")
+check("Particle speed" not in fast, "an AI flame without particles keeps the particles as they are")
+pt = cv.values_for(presets, {**fl, "quick": {"speed": "faster", "colour": "#2f7bff"},
+                             "adv": {"Particles": True, "Particles: direct look (no LTX, pro)": True}}, shot)
+check(pt["Particle speed"] == 1.8 and pt["Particle pro: color"] == "#2f7bff", "particles only: faster and blue particles")
+
+AN = importlib.import_module(pack.__name__ + ".element_forge.tracking.analysis")
+w0 = {"clip": "c.mp4", "frames": 89, "a": [10, 20], "b": [], "word": "", "alike": False, "own": False}
+k0 = AN.track_key(w0)
+check(AN.track_key({**w0, "fixes": "[]"}) == k0, "no fixes: the track keeps its key")
+k1 = AN.track_key({**w0, "fixes": '[{"frame": 40, "add": "100, 200"}]'})
+check(k1 != k0 and AN.track_key({**w0, "fixes": '[{"frame": 40, "add": "100, 200"}]'}) == k1, "a fix gives the track a key of its own")
+G = json.load(open(os.path.join(API, "element_forge.json"), encoding="utf-8"))
+check(G["962"]["class_type"] == "EFMaskFixes" and G["929"]["inputs"]["mask"] == ["962", 1] and G["930"]["inputs"]["mask"] == ["962", 0],
+      "EF Mask Fixes sits before both steady masks")
 print(f"{ok} checks passed")

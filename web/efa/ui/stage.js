@@ -3,7 +3,7 @@ import { icon } from "./icons.js";
 import * as S from "./state.js";
 import { styleDef, styleOf, directionWords, naturalDir } from "./presets.js";
 import { frameBox, genSize, genWindow, usesGuide, inWindow, ltxFrames, ptsOf, ptsText, maskFrame, maskPointCount, LEAVE_PTS, ADD_PTS,
-  MASK_FRAME } from "./run.js";
+  MASK_FRAME, MASK_FIXES, fixesOf, fixesText } from "./run.js";
 import { PostRenderer } from "./post.js";
 import { LiveSim, blendCss } from "./livesim.js";
 import { postSettings, commonSettings, weightAt, placeAt, brightAt, pivotOf, resultBox, setPlace, animated, keyHere, ensurePreview } from "./look.js";
@@ -339,8 +339,23 @@ export function frameHere() {
 export const atMaskFrame = (e) => frameHere() === maskFrame(e);
 function maskPoint(cp, kind) {
   const e = eff();
-  if (!e || (maskPointCount(e) && !atMaskFrame(e))) return;
+  if (!e) return;
   const here = frameHere(), k = kind === "add" ? ADD_PTS : LEAVE_PTS;
+  if (!atMaskFrame(e)) {
+    S.change((s) => {
+      const fx = s.effects.find((x) => x.id === s.active);
+      if (!fx) return;
+      const list = fixesOf(fx);
+      let f = list.find((x) => x.frame === here);
+      if (!f) { f = { frame: here, add: [], leave: [] }; list.push(f); }
+      const pts = f[kind], near = pts.findIndex((p) => Math.hypot(p.x - cp.x, p.y - cp.y) * view.s < 12);
+      if (near >= 0) pts.splice(near, 1); else pts.push({ x: Math.round(cp.x), y: Math.round(cp.y) });
+      fx.adv = { ...fx.adv };
+      const t = fixesText(list.filter((x) => x.add.length || x.leave.length).sort((a, b) => a.frame - b.frame));
+      if (t) fx.adv[MASK_FIXES] = t; else delete fx.adv[MASK_FIXES];
+    }, "mask-fix");
+    return;
+  }
   S.change((s) => {
     const fx = s.effects.find((x) => x.id === s.active);
     if (!fx) return;
@@ -864,7 +879,10 @@ function draw() {
     ctx.beginPath(); ctx.arc(q.x, q.y, 2.5, 0, Math.PI * 2); ctx.fillStyle = "#fff"; ctx.fill();
     label(q.x + 12, q.y - 10, k.toUpperCase());
   }
-  if (e && S.ui.step === "where" && atMaskFrame(e)) for (const [k, col] of [[ADD_PTS, "#5ad17a"], [LEAVE_PTS, "#ff6060"]]) for (const p of ptsOf(e, k)) {
+  const fixHere = e && S.ui.step === "where" ? fixesOf(e).find((f) => f.frame === frameHere()) : null;
+  const ringsHere = !e || S.ui.step !== "where" ? [] : atMaskFrame(e) ? [[ADD_PTS, "#5ad17a", ptsOf(e, ADD_PTS)], [LEAVE_PTS, "#ff6060", ptsOf(e, LEAVE_PTS)]]
+    : fixHere ? [[ADD_PTS, "#5ad17a", fixHere.add], [LEAVE_PTS, "#ff6060", fixHere.leave]] : [];
+  for (const [k, col, pts] of ringsHere) for (const p of pts) {
     const q = toScreen(p);
     ctx.beginPath(); ctx.arc(q.x, q.y, 8, 0, Math.PI * 2);
     ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fill(); line(2.5, col); ctx.stroke();
@@ -1211,8 +1229,8 @@ function autoHint() {
     : "Draw the path the effect follows, on the first frame (Alt: erase)");
   if (S.ui.tool === "pick" && isLive()) return setHint("Click a colour in your clip: the effect, its light and glow take it on");
   if (S.ui.step === "where" && e && !e.where.a && s?.placement !== "frame") return setHint("Click the object or the place for the effect");
-  if (S.ui.step === "where" && S.ui.maskTool && e?.where.a && maskPointCount(e) && !atMaskFrame(e)) {
-    return setHint(`The mask's points are on frame ${maskFrame(e)}: go there (Position → Go there) or clear them to start here`);
+  if (S.ui.step === "where" && S.ui.maskTool && e?.where.a && !atMaskFrame(e)) {
+    return setHint(`Fixing the mask on frame ${frameHere()}: ${S.ui.maskTool === "add" ? "click what the track lost here" : "click what it took by mistake"} (the mask frame is ${maskFrame(e)}). Esc: done`);
   }
   if (S.ui.step === "where" && S.ui.maskTool && e?.where.a && S.ui.tool === "point") return setHint(S.ui.maskTool === "add"
     ? "Click each part to add (green ring); a click on a ring takes it away. Esc: done" : "Click each part to leave out (red ring); a click on a ring takes it away. Esc: done");

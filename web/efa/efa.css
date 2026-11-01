@@ -244,6 +244,9 @@
 .efa-root .swatch.pick { display: grid; place-items: center; cursor: pointer; background: var(--panel); color: var(--text-2); overflow: hidden; }
 .efa-root .swatch.pick svg { width: 14px; height: 14px; }
 .efa-root .swatch.pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.efa-root .swatches.compact { gap: 4px; }
+.efa-root .swatches.compact .swatch { width: 22px; height: 22px; }
+.efa-root .swatches.compact .swatch.none { width: auto; padding: 0 7px; }
 .efa-root .enhance { display: grid; gap: 6px; padding: 10px; border-radius: var(--radius-s); border: 1px solid var(--line-2); background: var(--panel); }
 .efa-root .enhance .label { margin: 0; }
 .efa-root .assist-idle { display: grid; gap: 6px; justify-items: start; margin-bottom: 4px; }

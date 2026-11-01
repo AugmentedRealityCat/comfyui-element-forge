@@ -586,11 +586,32 @@ function maskFields(e) {
       words(R.LEAVE_WORDS, "e.g. hand; handle", "Leave out: words"),
       clicks("leave", R.LEAVE_PTS, "Click to leave out", "Alt"),
       h("p", { class: "muted small" }, "Words, or a click on each part (red ring). The mask frame shows them in red.")),
+    fixesField(e, fps),
     h("div", { class: "field mask" },
       h("div", { class: "label", title: "Averages each frame's mask with its neighbours, aligned to the motion" }, "Steady mask"),
       seg("Steady mask", STEADY, +(e.adv?.[R.MASK_STEADY] ?? STEADY_DEFAULT), (v) => edit((a) => { if (v === STEADY_DEFAULT) delete a[R.MASK_STEADY]; else a[R.MASK_STEADY] = v; })),
       h("p", { class: "muted small" }, "Less flicker where the object blurs or the light is poor. Strong can round off fast, thin parts.")),
   ];
+}
+function fixesField(e, fps) {
+  const list = R.fixesOf(e);
+  const drop = (frame) => S.change((s) => {
+    const x = s.effects.find((y) => y.id === e.id);
+    if (!x) return;
+    x.adv = { ...x.adv };
+    const t = R.fixesText(R.fixesOf(x).filter((f) => f.frame !== frame));
+    if (t) x.adv[R.MASK_FIXES] = t; else delete x.adv[R.MASK_FIXES];
+  }, "mask-fix");
+  return h("div", { class: "field mask" },
+    h("div", { class: "label", title: "Where the track goes wrong: the mask is mended on that frame and tracked from it up to the fixes next to it" }, "Fixes on other frames"),
+    ...list.map((f) => h("div", { class: "row gap fix-row" },
+      h("span", { class: "small" }, `${fmtSec(f.frame / fps)} · frame ${f.frame}`),
+      h("span", { class: "muted small" }, [f.add.length ? `+${f.add.length}` : null, f.leave.length ? `−${f.leave.length}` : null].filter(Boolean).join(" ")),
+      h("span", { class: "spacer" }),
+      h("button", { class: "btn ghost small", title: "The playhead goes to this frame", onclick: () => seekTo(f.frame / fps) }, "Go there"),
+      h("button", { class: "btn ghost small", title: "Remove this fix", "aria-label": `Remove the fix on frame ${f.frame}`, onclick: () => drop(f.frame) }, "×"))),
+    h("p", { class: "muted small" }, list.length ? "Each fix is tracked from its frame up to the fixes next to it. Track again to see them."
+      : "Where the track loses a part or takes too much: move the playhead there, Ctrl-click what is missing, Alt-click what is too much."));
 }
 function objectGroup() {
   const f = fx(), word = wordOf(), e = effect(), left = e && R.leaveSet(e), masked = e && R.maskSet(e);
@@ -855,6 +876,39 @@ function placeBlock(e, st) {
   }
   return out;
 }
+const QUICK_ROWS = [["amount", "Amount", [["less", "Less"], ["", "As is"], ["more", "More"]]],
+  ["speed", "Speed", [["slower", "Slower"], ["", "As is"], ["faster", "Faster"]]],
+  ["size", "Size", [["smaller", "Smaller"], ["", "As is"], ["bigger", "Bigger"]]]];
+function quickBlock(e, run) {
+  const q = e.quick || {};
+  const set = (k, v) => S.change((sh) => {
+    const x = sh.effects.find((y) => y.id === e.id);
+    if (!x) return;
+    x.quick = { ...(x.quick || {}) };
+    if (v) x.quick[k] = v; else delete x.quick[k];
+  }, "quick");
+  const parts = !!run?.settings?.Particles || !!e.adv?.Particles;
+  const ai = !P.fromLibrary(e) && run?.cost === "gen" && !(e.adv?.[P.DIRECT_LOOK] ?? run?.settings?.[P.DIRECT_LOOK]);
+  const words = P.quickWords(e);
+  const own = q.colour && !P.QUICK_COLOURS.some(([, c]) => c === q.colour);
+  const out = [h("div", { class: "field" }, h("div", { class: "label", title: "The colour it is made in. Scene & finish tints it after the run." }, "Colour"),
+    h("div", { class: "swatches compact", role: "radiogroup", "aria-label": "Colour" },
+      h("button", { class: "swatch none" + (!q.colour ? " on" : ""), role: "radio", "aria-checked": String(!q.colour), title: "The style's own colours",
+        onclick: () => set("colour", null) }, "As is"),
+      ...P.QUICK_COLOURS.map(([n, c]) => h("button", { class: "swatch" + (q.colour === c ? " on" : ""), role: "radio", "aria-checked": String(q.colour === c),
+        title: n, "aria-label": `Colour ${n}`, style: { background: c }, onclick: () => set("colour", c) })),
+      own ? h("button", { class: "swatch on", role: "radio", "aria-checked": "true", title: `Your colour (${P.colourName(q.colour)} for the AI)`,
+        "aria-label": "Your colour", style: { background: q.colour } }) : null,
+      h("label", { class: "swatch pick", title: "Any colour" }, icon("plus"), h("input", { type: "color", value: q.colour || "#ff7a1a", "aria-label": "Any colour",
+        onchange: (ev) => set("colour", ev.target.value) }))))];
+  for (const [k, label, opts] of QUICK_ROWS) {
+    out.push(h("div", { class: "field" }, h("div", { class: "label" }, label), seg(label, opts, q[k] || "", (v) => set(k, v))));
+  }
+  const how = [ai && words ? `For the AI: “${words}”.` : ai ? "For the AI they are words in its description." : null,
+    parts ? "They set the particles too." : null].filter(Boolean).join(" ");
+  if (how) out.push(h("p", { class: "muted small" }, how));
+  return out;
+}
 function howBlock(e, st) {
   const f = fx();
   const how = f.how_it_goes_in && f.how_it_goes_in !== "style default" ? f.how_it_goes_in : (st.settings?.[P.INPAINT] ? "inpaint" : "overlay");
@@ -935,6 +989,7 @@ function effectBody() {
     const p = P.promptOf(e);
     if (p) kids.push(h("div", { class: "field" }, h("div", { class: "label" }, "Strength"),
       seg("Strength", [["subtle", "Subtle"], ["normal", "Normal"], ["strong", "Strong"]], fx().strength || "normal", (v) => api.setFx("strength", v))));
+    kids.push(...quickBlock(e, effStyle(st, e)));
     if (p && !p.what) kids.push(h("div", { class: "field" }, h("div", { class: "label" }, "Your effect in words"),
       h("div", { class: "row gap" }, fxText("describe", "e.g. a glowing blue crystal"), suggestButton(wx, typed.get("describe")?.value ?? fx().describe)),
       ...wishResults(wx)));

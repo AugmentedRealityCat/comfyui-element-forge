@@ -1,6 +1,6 @@
 import * as S from "./state.js";
 import * as C from "./comfy.js";
-import { styleDef, styleOf, composePrompt, inScene, inpaintSettings, objectWord, INPAINT, fromLibrary, placeFixed, PLACEMENT } from "./presets.js";
+import { styleDef, styleOf, composePrompt, inScene, inpaintSettings, objectWord, INPAINT, fromLibrary, placeFixed, PLACEMENT, QUICK } from "./presets.js";
 import { clamp, store, uid } from "./lib.js";
 import { ltxForBuild } from "./machine.js";
 
@@ -103,7 +103,17 @@ export const leaveSet = (e) => !!(leavePoints(e).length || String(e?.adv?.[LEAVE
 export const MASK_STEADY = "Mask: steady over frames (0 = off)";
 export const maskFrame = (e) => Math.max(0, Math.round(+e?.adv?.[MASK_FRAME] || 0));
 export const maskPointCount = (e) => ptsOf(e, ADD_PTS).length + ptsOf(e, LEAVE_PTS).length;
-export const maskSet = (e) => !!(maskFrame(e) || maskPointCount(e) || leaveSet(e) || String(e?.adv?.[ADD_WORDS] || "").trim());
+export const MASK_FIXES = "Mask fixes (JSON: frame, add, leave; Ctrl/Alt-click on another frame in the app)";
+const ptsList = (s) => ptsOf({ adv: { k: s } }, "k");
+export function fixesOf(e) {
+  let raw = [];
+  try { raw = JSON.parse(e?.adv?.[MASK_FIXES] || "[]"); } catch { raw = []; }
+  return (Array.isArray(raw) ? raw : []).filter((f) => f && Number.isFinite(+f.frame))
+    .map((f) => ({ frame: Math.round(+f.frame), add: ptsList(f.add), leave: ptsList(f.leave) }))
+    .filter((f) => f.add.length || f.leave.length).sort((a, b) => a.frame - b.frame);
+}
+export const fixesText = (list) => (list.length ? JSON.stringify(list.map((f) => ({ frame: f.frame, add: ptsText(f.add), leave: ptsText(f.leave) }))) : undefined);
+export const maskSet = (e) => !!(maskFrame(e) || maskPointCount(e) || leaveSet(e) || String(e?.adv?.[ADD_WORDS] || "").trim() || fixesOf(e).length);
 
 export function valuesFor(effect, shot, scale = 1) {
   const st = styleOf(effect);
@@ -174,6 +184,14 @@ export function valuesFor(effect, shot, scale = 1) {
   v["Seed"] = effect.seed.mode === "keep" && effect.seed.value != null ? effect.seed.value : Math.floor(Math.random() * 2 ** 31);
   Object.assign(v, effect.adv || {});
   if (placeFixed(st)) delete v[PLACEMENT];
+  const q = effect.quick || {};
+  if (v.Particles) {
+    for (const [k, name] of [["amount", "Particle amount"], ["speed", "Particle speed"], ["size", "Particle size"]]) {
+      const f = QUICK[k][q[k]]?.[0];
+      if (f) v[name] = +((v[name] ?? 1) * f).toFixed(3);
+    }
+    if (q.colour && !v["Particle pro: color"]) v["Particle pro: color"] = q.colour;
+  }
   if (st.settings?.Particles && v["Particle emitter"] === "area" && effect.box) {
     const b = effect.box;
     v["Particle area"] = [b.x / clip.width, b.y / clip.height, (b.x + b.w) / clip.width, (b.y + b.h) / clip.height]

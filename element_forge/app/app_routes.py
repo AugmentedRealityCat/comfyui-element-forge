@@ -649,13 +649,15 @@ KEPT_DEPTH, KEPT_NORMALS, KEPT_MASK, KEPT_MASK_B = "176", "409", "197", "204"
 KEPT_CLEAN, LEFT_PARTS = "904", "903"
 KEPT_WHOLE, MASK_AT = "926", "925"
 MASK_STEADY = "929"
+MASK_FIXES = "962"
 KEPT_CLASSES = {KEPT_DEPTH: "EFDeflicker", KEPT_NORMALS: "EFMoGeNormals", KEPT_MASK: "ComfySwitchNode", KEPT_MASK_B: "SAM3_TrackToMask"}
 WHERE = {"a": ("Point A x", "Point A y"), "b": ("Point B x", "Point B y"), "word": "Object word (optional, helps the click)",
          "alike": "Object word: all alike objects (e.g. all sticks of a crown; off = the clicked one)",
          "own": "Own object mask (off = click)", "own_mask": "Own object mask: first frame, paint the object (mask editor)",
          "leave": "Leave out: points (x, y; Alt-click in the app)", "leave_words": "Leave out: words (e.g. hand; handle)",
          "frame": "Mask frame (the frame the mask is set on; 0 = the first)", "add": "Mask: add points (x, y; Ctrl-click in the app)",
-         "add_words": "Mask: add words (e.g. blade; tip)"}
+         "add_words": "Mask: add words (e.g. blade; tip)",
+         "fixes": "Mask fixes (JSON: frame, add, leave; Ctrl/Alt-click on another frame in the app)"}
 
 
 def mask_at_frame(values):
@@ -677,13 +679,15 @@ def where_of(graph, settings):
     b = [v(WHERE["b"][0]), v(WHERE["b"][1])]
     w = {"clip": clip, "frames": v("Frames"), "a": [v(WHERE["a"][0]), v(WHERE["a"][1])], "b": b if b[0] is not None and b[0] >= 0 else [],
          "word": v(WHERE["word"]) or "", "alike": bool(v(WHERE["alike"])), "own": bool(v(WHERE["own"])), "own_mask": v(WHERE["own_mask"]) or ""}
-    if any(WHERE[k] in settings and isinstance(v(WHERE[k]), list) for k in ("leave", "leave_words", "frame", "add", "add_words")):
+    if any(WHERE[k] in settings and isinstance(v(WHERE[k]), list) for k in ("leave", "leave_words", "frame", "add", "add_words", "fixes")):
         return None
     for k in ("leave", "leave_words", "add", "add_words"):
         if WHERE[k] in settings and str(v(WHERE[k]) or "").strip():
             w[k] = str(v(WHERE[k])).strip()
     if WHERE["frame"] in settings and int(v(WHERE["frame"]) or 0) > 0:
         w["frame"] = int(v(WHERE["frame"]))
+    if WHERE["fixes"] in settings and str(v(WHERE["fixes"]) or "").strip() not in ("", "[]"):
+        w["fixes"] = str(v(WHERE["fixes"])).strip()
     return w
 
 
@@ -726,6 +730,10 @@ def use_kept(graph, settings):
                                      "x": 0, "y": 0, "operation": "subtract"}, "_meta": {"title": "Kept object mask without the parts left out"}}
             elif not AN.leave_of(w):
                 _rewire(graph, [KEPT_CLEAN, 0], [KEPT_MASK, 0])
+        fix = graph.get(MASK_FIXES)
+        if fix and fix.get("class_type") == "EFMaskFixes":
+            _rewire(graph, [MASK_FIXES, 0], fix["inputs"]["whole"])
+            _rewire(graph, [MASK_FIXES, 1], fix["inputs"]["clean"])
     return graph
 
 
@@ -734,7 +742,8 @@ def keep_track(graph, settings):
     if not w or graph.get(KEPT_MASK, {}).get("class_type") != "ComfySwitchNode":
         return graph
     left = AN.leave_of(w) and graph.get(KEPT_CLEAN, {}).get("class_type") == "EFLeaveOutTrack"
-    graph["track_keep"] = {"class_type": "EFSaveTrack", "inputs": {"mask": [KEPT_WHOLE if KEPT_WHOLE in graph else KEPT_MASK, 0], "where": json.dumps(w),
+    whole = [MASK_FIXES, 0] if w.get("fixes") and graph.get(MASK_FIXES, {}).get("class_type") == "EFMaskFixes"         else [KEPT_WHOLE if KEPT_WHOLE in graph else KEPT_MASK, 0]
+    graph["track_keep"] = {"class_type": "EFSaveTrack", "inputs": {"mask": whole, "where": json.dumps(w),
                                                                     **({"mask_b": [KEPT_MASK_B, 0]} if w["b"] else {}),
                                                                     **({"left_out": [KEPT_CLEAN, 1]} if left else {})},
                            "_meta": {"title": "Keep the track"}}

@@ -49,12 +49,12 @@ A prompt alone decides little: the AI guesses where the effect goes, how big it 
     </td>
     <td width="50%" valign="top">
       <h3>Masks you can correct</h3>
-      <p>Set the object's mask on <b>any frame</b>, add and leave out parts with clicks or words, and keep it <b>steady</b> where the object blurs. The effect goes behind the object or in front of it.</p>
+      <p>Set the object's mask on <b>any frame</b>, add and leave out parts with clicks or words, <b>fix it on the frames where the track slips</b> with one more click, and keep it <b>steady</b> where the object blurs. The effect goes behind the object or in front of it.</p>
     </td>
   </tr>
 </table>
 
-Effects combine with the object they touch: turn on <b>The object crumbles</b> and a statue falls apart into particles under its own flames, with the scene behind it filled in, and its pieces keep their own forces.
+Effects combine with the object they touch: turn on <b>The object crumbles</b> and a statue falls apart into particles under its own flames, with the scene behind it filled in, and its pieces keep their own forces. Colour, amount, speed and size are one click for every style: words for the AI, and the same values for the particles that guide it.
 
 Light, glow, colour, placement and timing stay adjustable <b>after the run, without generating again</b>, and every run is kept as a version to compare.
 

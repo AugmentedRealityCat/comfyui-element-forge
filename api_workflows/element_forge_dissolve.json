@@ -1383,8 +1383,8 @@
   "class_type": "EFMaskSteady",
   "inputs": {
    "mask": [
-    "904",
-    0
+    "962",
+    1
    ],
    "plate": [
     "167",
@@ -1404,7 +1404,7 @@
   "class_type": "EFMaskSteady",
   "inputs": {
    "mask": [
-    "926",
+    "962",
     0
    ],
    "plate": [
@@ -1419,6 +1419,48 @@
   },
   "_meta": {
    "title": "Whole object mask, steady"
+  }
+ },
+ "961": {
+  "class_type": "PrimitiveString",
+  "inputs": {
+   "value": ""
+  },
+  "_meta": {
+   "title": "Mask fixes (JSON: frame, add, leave; Ctrl/Alt-click on another frame in the app)"
+  }
+ },
+ "962": {
+  "class_type": "EFMaskFixes",
+  "inputs": {
+   "whole": [
+    "926",
+    0
+   ],
+   "clean": [
+    "904",
+    0
+   ],
+   "images": [
+    "167",
+    0
+   ],
+   "model": [
+    "177",
+    0
+   ],
+   "clip": [
+    "177",
+    1
+   ],
+   "fixes": [
+    "961",
+    0
+   ],
+   "threshold": 0.4
+  },
+  "_meta": {
+   "title": "Object mask with its fixes on other frames"
   }
  },
  "198": {

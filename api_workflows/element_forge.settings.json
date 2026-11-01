@@ -256,6 +256,10 @@
    "928",
    "value"
   ],
+  "Mask fixes (JSON: frame, add, leave; Ctrl/Alt-click on another frame in the app)": [
+   "961",
+   "value"
+  ],
   "Emitter x in window": [
    "198",
    "anchor_x"
@@ -699,6 +703,7 @@
    922,
    923,
    928,
+   961,
    223,
    224,
    225,
@@ -800,6 +805,7 @@
    927,
    929,
    930,
+   962,
    198,
    199,
    200,

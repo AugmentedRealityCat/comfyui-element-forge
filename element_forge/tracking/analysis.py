@@ -247,6 +247,23 @@ def mask_frame_of(where):
     return [frame, pts, words] if frame or pts or words else None
 
 
+def fixes_of(where):
+    text = str(where.get("fixes") or "").strip()
+    if text in ("", "[]"):
+        return None
+    try:
+        from .mask_controls import parse_fixes
+    except ImportError:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("ef_mask_controls", os.path.join(os.path.dirname(os.path.abspath(__file__)), "mask_controls.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        parse_fixes = mod.parse_fixes
+    fx = parse_fixes(text)
+    return [[f["frame"], [[round(p["x"]), round(p["y"])] for p in f["add"]], [[round(p["x"]), round(p["y"])] for p in f["leave"]],
+             [t.lower() for t in f["add_words"]], [t.lower() for t in f["leave_words"]]] for f in fx] or None
+
+
 def track_key(where):
     parts = [os.path.basename(str(where.get("clip", ""))), clip_source(where.get("clip")), int(where.get("frames", 0)),
              [int(v) for v in where.get("a") or []], [int(v) for v in where.get("b") or []], str(where.get("word") or "").strip().lower(),
@@ -255,6 +272,8 @@ def track_key(where):
         parts.append(leave_of(where))
     if mask_frame_of(where):
         parts.append(["at", *mask_frame_of(where)])
+    if fixes_of(where):
+        parts.append(["fixes", fixes_of(where)])
     return hashlib.sha1(json.dumps(parts).encode()).hexdigest()[:16]
 
 

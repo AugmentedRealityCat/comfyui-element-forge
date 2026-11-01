@@ -144,4 +144,49 @@ try:
 except ValueError as e:
     check("track it first" in str(e), "dissolve preview without a mask: the hint to track first, not a cv2 error")
 LV.RUNNER.prepare = _prep
+
+emc = types.SimpleNamespace(n=6, fps=6.0, W=320, H=200, cam=pt.Camera(6), depth=None, z=np.full(6, 0.5),
+                            a=np.tile([[160.0, 100.0]], (6, 1)))
+Pc = {**pt.BASE, **pt.PRESETS["frost"], "start": 0.0, "crack_seeds": 1}
+try:
+    pc = pt.make_paths(Pc, emc, 3)
+    tab, mats = LV.compact_cracks(pc, emc, 6)
+    rows = tab.reshape(-1, 7)
+    per_frame = [sum(len(np.asarray(x[0])) for x in pc[i] if np.asarray(x[0]).ndim == 3) for i in range(6)]
+    check([int((rows[:, 0] <= i).sum()) for i in range(6)] == per_frame, "compact cracks: every frame draws the segments it had")
+    check(len(mats) == 36 and np.all(np.diff(rows[:, 0]) >= 0), "compact cracks: sorted by first frame, a camera per frame")
+    old = sum(9 * n_ for n_ in per_frame) * 4
+    check(tab.nbytes + mats.nbytes < old or old < 2000, f"compact cracks: {tab.nbytes + mats.nbytes} bytes instead of {old}")
+except (KeyError, AttributeError, TypeError) as e:
+    check(False, f"compact cracks: the crack paths ran ({e})")
+
+rng = np.random.default_rng(1)
+N, CAP = 20, 30
+recs = {k: rng.uniform(0, 100, (N, CAP)).astype(np.float32) for k in ("x", "y", "z", "vx", "vy", "size", "rot")}
+recs["alpha"], recs["vis"], recs["age"] = (rng.uniform(0.2, 1, (N, CAP)).astype(np.float32) for _ in range(3))
+recs["x"][rng.uniform(size=(N, CAP)) < 0.3] = np.nan
+stt = {"rnd": rng.uniform(size=CAP)}
+emf = types.SimpleNamespace(n=N, W=320, H=200, zref=0.5)
+Pd = {"dof": 0}
+whole = LV.encode({"rec": {**recs, "rnd": stt["rnd"]}, "em": emf, "paths": None}, Pd)
+got = []
+LV.STREAM.emit = got.append
+LV.PART_GAP = 0.0
+send = LV._part_sender({"W": 320, "H": 200}, Pd, True, LV.STREAM.emit)
+for i in range(N):
+    send(i, recs, stt, CAP)
+LV.STREAM.emit = None
+check(len(got) >= 2, f"stream: {len(got)} parts while the frames are simulated")
+sent = LV.STREAM.sent
+rest = LV.frames_from(whole, sent)
+ids = []
+for b in got:
+    n_ = struct.unpack("<I", b[:4])[0]
+    hd = json.loads(b[4:4 + n_])
+    tab = {t["name"]: t for t in hd["arrays"]}
+    t = tab["id"]
+    ids.append(np.frombuffer(b, np.uint32, t["length"], 4 + n_ + t["offset"]))
+ids.append(rest["id"])
+check(np.array_equal(np.concatenate(ids), whole["id"]), "stream: the parts and the rest are the whole answer")
+check(int(rest["offs"][0]) == 0 and len(rest["offs"]) == N - sent + 1, "stream: the rest starts at its first frame")
 print(f"{ok} checks passed")

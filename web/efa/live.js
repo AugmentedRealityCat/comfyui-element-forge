@@ -58,6 +58,47 @@ function target() {
   return parts.length ? { shot, e, c, st, kind: "motion", parts } : null;
 }
 
+async function eachMessage(r, fn) {
+  const reader = r.body.getReader();
+  let parts = [], have = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (value?.length) { parts.push(value); have += value.length; }
+    for (;;) {
+      if (have < 4) break;
+      if (parts.length > 1) { const b = new Uint8Array(have); let o = 0; for (const p of parts) { b.set(p, o); o += p.length; } parts = [b]; }
+      const b = parts[0], len = new DataView(b.buffer, b.byteOffset, 4).getUint32(0, true);
+      if (have < 4 + len) break;
+      const msg = b.slice(4, 4 + len).buffer;
+      parts = have > 4 + len ? [b.subarray(4 + len)] : [];
+      have -= 4 + len;
+      await fn(decodeLive(msg));
+    }
+    if (done) return;
+  }
+}
+const PER_DRAW = ["id", "x", "y", "r", "a", "age", "vx", "vy", "rot"];
+function cat(a, b) {
+  if (!a?.length) return b;
+  if (!b?.length) return a;
+  const out = new a.constructor(a.length + b.length);
+  out.set(a); out.set(b, a.length);
+  return out;
+}
+function addPart(acc, m) {
+  const h = m.header, A = m.arrays, n = h.n, from = h.from, to = h.to;
+  const prev = acc?.arrays || {};
+  const arrays = {};
+  for (const k of PER_DRAW) arrays[k] = cat(prev[k], A[k]);
+  const base = prev.id?.length || 0, offs = new Uint32Array(n + 1);
+  if (prev.offs) offs.set(prev.offs.subarray(0, from + 1));
+  for (let f = from; f <= to; f++) offs[f] = base + (A.offs[f - from] ?? A.offs[A.offs.length - 1]);
+  offs.fill(arrays.id.length, to + 1);
+  arrays.offs = offs;
+  for (const k of ["rnd", "pcol", "paths", "cracks", "cam"]) arrays[k] = A[k]?.length >= (prev[k]?.length || 0) ? A[k] : prev[k];
+  return { header: { ...(acc?.header || {}), ...h }, arrays, ready: to };
+}
+
 async function request() {
   const t = target();
   if (!t || t.kind === "motion") requestValues();
@@ -89,7 +130,7 @@ async function request() {
   S.setUI({ liveSim: { ...(same ? prev : {}), clip: c.name, effect: e.id, status: "running", lookOnly, error: null } });
   const have = same ? prev.data?.header.key : null;
   const t0 = performance.now();
-  busy = fetch("/element-forge/api/live", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, have }) });
+  busy = fetch("/element-forge/api/live", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, have, stream: true }) });
   try {
     const r = await busy;
     if (r.status === 409) return;
@@ -98,7 +139,19 @@ async function request() {
       try { msg = (await r.json()).error || msg; } catch {  }
       throw new Error(msg);
     }
-    const d = decodeLive(await r.arrayBuffer());
+    let d = null, acc = null, gone = false;
+    await eachMessage(r, (m) => {
+      if (m.header.error) { if (m.header.status === 409) { gone = true; return; } throw new Error(m.header.error); }
+      if (m.header.stream === "part" || m.header.stream === "end") acc = addPart(acc, m); else d = m;
+      if (m.header.stream === "end") d = acc;
+      if (m.header.stream !== "part") return;
+      const cur = target();
+      if (!cur || cur.c.name !== c.name || cur.e.id !== e.id) return;
+      S.setUI({ liveSim: { ...(S.ui.liveSim || {}), clip: c.name, effect: e.id, data: { header: acc.header, arrays: acc.arrays },
+        look: { ...acc.header.look, kind: acc.header.kind || "particles" }, status: "running", lookOnly: false, error: null,
+        partial: { ready: acc.ready, n: acc.header.n } } });
+    });
+    if (gone || !d) return;
     const only = !d.header.arrays?.length;
     if (only && !kept.has(d.header.key)) { lastSig = null; return poke(true); }
     const data = only ? kept.get(d.header.key) : d;
@@ -108,7 +161,7 @@ async function request() {
     while (kept.size > KEEP) kept.delete(kept.keys().next().value);
     const cur = target();
     if (!cur || cur.c.name !== c.name || cur.e.id !== e.id) return;
-    S.setUI({ liveSim: { clip: c.name, effect: e.id, data, look: { ...d.header.look, kind: d.header.kind || "particles" }, status: "ready", lookOnly: false, error: null,
+    S.setUI({ liveSim: { clip: c.name, effect: e.id, data, look: { ...d.header.look, kind: d.header.kind || "particles" }, status: "ready", lookOnly: false, error: null, partial: null,
       ms: Math.round(performance.now() - t0), server: d.header.ms, leftOut: d.header.left_out || [], fallbacks: d.header.fallbacks || [] } });
   } catch (err) {
     S.setUI({ liveSim: { ...(S.ui.liveSim || {}), clip: c.name, effect: e.id, status: "failed", error: err.message } });

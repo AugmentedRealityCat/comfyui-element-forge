@@ -375,3 +375,98 @@ class EFMaskAtFrame:
             return fit_mask(SAM3_TrackToMask.execute(track_data=data, object_indices='')[0], len(batch), h, w)
 
         return track_from_frame(images, sel, ref, track), track_from_frame(images, left, ref, track)
+
+
+def parse_fixes(text):
+    text = (text or '').strip()
+    if not text:
+        return []
+    try:
+        data = json.loads(text)
+    except ValueError as err:
+        raise ValueError(f'Mask fixes: not valid JSON ({err}).') from err
+    if not isinstance(data, list):
+        raise ValueError('Mask fixes: a list of {"frame", "add", "leave"} is needed.')
+    by = {}
+    for d in data:
+        if not isinstance(d, dict) or 'frame' not in d:
+            raise ValueError('Mask fixes: every fix needs its "frame".')
+        f = by.setdefault(int(d['frame']), {'frame': int(d['frame']), 'add': [], 'leave': [], 'add_words': [], 'leave_words': []})
+        for k in ('add', 'leave'):
+            f[k] += parse_points(str(d.get(k) or ''))
+        for k in ('add_words', 'leave_words'):
+            f[k] += split_words(str(d.get(k) or ''))
+    return [f for _, f in sorted(by.items()) if f['add'] or f['leave'] or f['add_words'] or f['leave_words']]
+
+
+class EFMaskFixes:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {'required': {
+            'whole': ('MASK', {'tooltip': 'The whole object per frame (the click or the mask frame).'}),
+            'clean': ('MASK', {'tooltip': 'The object without the parts left out (what the effect uses).'}),
+            'images': ('IMAGE', {'tooltip': 'The clip.'}),
+            'model': ('MODEL',),
+            'fixes': ('STRING', {'default': '', 'multiline': True, 'tooltip': 'JSON list of fixes: frame, add / leave points '
+                                 '("x, y; x, y" in clip pixels on that frame), add_words / leave_words. Empty: no fixes.'}),
+            'threshold': ('FLOAT', {'default': 0.4, 'min': 0.0, 'max': 1.0, 'step': 0.05}),
+        }, 'optional': {'clip': ('CLIP',)}}
+
+    RETURN_TYPES = ('MASK', 'MASK')
+    RETURN_NAMES = ('whole', 'clean')
+    FUNCTION = 'run'
+    CATEGORY = 'Element Forge/Tools'
+    DESCRIPTION = ('Fixes the object\'s mask on other frames: on each fix\'s frame the parts to add and to leave out are found '
+                   'and tracked both ways up to the neighbouring fixes, then added to and taken out of both masks. No '
+                   'fixes: both masks go through unchanged, without SAM3.')
+
+    def run(self, whole, clean, images, model, fixes='', threshold=0.4, clip=None):
+        fx = parse_fixes(fixes)
+        if not fx:
+            return whole, clean
+        from comfy_extras.nodes_sam3 import SAM3_Detect, SAM3_TrackToMask, SAM3_VideoTrack
+        n, h, w = images.shape[:3]
+        W, C = fit_mask(whole, n, h, w).clone(), fit_mask(clean, n, h, w).clone()
+
+        def detect(frame, p=None, ng=None, text=None):
+            cond = None
+            if text:
+                if clip is None:
+                    raise ValueError('Words need the CLIP output of the SAM3 loader.')
+                cond = clip.encode_from_tokens_scheduled(clip.tokenize(text))
+            m = SAM3_Detect.execute(model=model, image=images[frame:frame + 1], conditioning=cond, positive_coords=json.dumps(p or []),
+                                    negative_coords=json.dumps(ng or []), threshold=threshold, refine_iterations=2,
+                                    individual_masks=False)[0]
+            return fit_mask(m, 1, h, w)
+
+        def track(batch, m):
+            if not torch.any(m > 0.5):
+                return torch.zeros((len(batch), h, w))
+            data = SAM3_VideoTrack.execute(images=batch, model=model, initial_mask=m, detection_threshold=0.5, max_objects=1,
+                                           detect_interval=1)[0]
+            return fit_mask(SAM3_TrackToMask.execute(track_data=data, object_indices='')[0], len(batch), h, w)
+
+        frames = [min(max(f['frame'], 0), n - 1) for f in fx]
+        for i, f in enumerate(fx):
+            ref = frames[i]
+            for p in f['add'] + f['leave']:
+                if not (0 <= p['x'] < w and 0 <= p['y'] < h):
+                    raise ValueError(f'A fix point ({p["x"]:.0f}, {p["y"]:.0f}) on frame {ref} is outside the clip ({w} x {h}).')
+            pos = [{'x': round(p['x']), 'y': round(p['y'])} for p in f['add']]
+            neg = [{'x': round(p['x']), 'y': round(p['y'])} for p in f['leave']]
+            add = detect(ref, pos, neg) if pos else torch.zeros((1, h, w))
+            for t in f['add_words']:
+                add = torch.maximum(add, detect(ref, text=t))
+            left = torch.zeros((1, h, w))
+            for p in neg:
+                left = torch.maximum(left, detect(ref, [p], pos))
+            for t in f['leave_words']:
+                left = torch.maximum(left, detect(ref, text=t))
+            lo = frames[i - 1] + 1 if i else 0
+            hi = frames[i + 1] - 1 if i + 1 < len(fx) else n - 1
+            seg = images[lo:hi + 1]
+            a_t = track_from_frame(seg, add, ref - lo, track) if len(seg) > 1 else add
+            l_t = track_from_frame(seg, left, ref - lo, track) if len(seg) > 1 else left
+            for M in (W, C):
+                M[lo:hi + 1] = torch.maximum(M[lo:hi + 1], a_t) * (1 - l_t)
+        return W, C

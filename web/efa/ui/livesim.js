@@ -160,6 +160,14 @@ export class LiveSim {
       if (f >= 0 && f < n) this.paths[f].push([j + 3, m, P[j + 2]]);
       j += 3 + 3 * m;
     }
+    const K = A.cracks || [], C = A.cam || [];
+    this.crackRows = Math.floor(K.length / 7);
+    this.crackBorn = new Uint32Array(n);
+    for (let f = 0, r = 0; f < n; f++) {
+      while (r < this.crackRows && K[r * 7] <= f) r++;
+      this.crackBorn[f] = r;
+    }
+    this.crackCam = C.length >= n * 6 ? C : null;
     this.size(d.header.W, d.header.H);
     this.drawn = -1;
   }
@@ -282,6 +290,18 @@ export class LiveSim {
   paths_(i, L) {
     const A = this.data.arrays;
     const P = A.paths;
+    const K = A.cracks, rows = this.crackCam ? this.crackBorn[i] : 0;
+    if (K?.length && rows) {
+      const c0 = gradient(L.colors, 0, [0, 0, 0]).map((v) => v * (L.glow ?? 1));
+      const m = this.crackCam, o = i * 6;
+      const sx = (x, y) => m[o] * x + m[o + 1] * y + m[o + 2], sy = (x, y) => m[o + 3] * x + m[o + 4] * y + m[o + 5];
+      for (let r = 0; r < rows; r++) {
+        const b = r * 7, w = K[b + 1], a = K[b + 2];
+        const x0 = sx(K[b + 3], K[b + 4]), y0 = sy(K[b + 3], K[b + 4]), x1 = sx(K[b + 5], K[b + 6]), y1 = sy(K[b + 5], K[b + 6]);
+        this.line(x0, y0, x1, y1, Math.max(0.5, 0.5 * w), c0, a, a);
+        this.line(x0, y0, x1, y1, Math.max(2, 2.5 * w), c0, 0.1 * a, 0.1 * a);
+      }
+    }
     if (P?.length && this.paths[i]?.length) {
       const c0 = gradient(L.colors, 0, [0, 0, 0]).map((v) => v * (L.glow ?? 1));
       for (const [o, m, w] of this.paths[i]) {

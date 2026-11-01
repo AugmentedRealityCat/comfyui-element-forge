@@ -29,6 +29,8 @@ const variants = [
   { a: [400, 300], adv: { "Particles: direct look (no LTX, pro)": false } },
   { a: [400, 300], adv: { [P.PLACEMENT]: "frame" } },
   { a: [400, 300], box: [300, 200, 200, 200], adv: { [P.PLACEMENT]: "point", [P.SIDE]: "centre" } },
+  { a: [400, 300], quick: { colour: "#3070ff", amount: "more", speed: "slower", size: "bigger" } },
+  { a: [400, 300], quick: { amount: "less" }, adv: { Particles: true, "Particles: direct look (no LTX, pro)": true, "Particle amount": 1.5 } },
   { a: [400, 300], b: [800, 600], adv: { [P.PLACEMENT]: "between", "Object crumbles under the effect (the dissolve is the plate)": true } },
   { a: [400, 300], start: 0.4, adv: { [P.PLACEMENT]: "object", "Particle emitter": "area", "Object crumbles under the effect (the dissolve is the plate)": true } },
 ];
@@ -48,6 +50,7 @@ for (const e of presets.effects) for (const s of e.styles) for (const clip of cl
   if (v.inpaint != null) fx.adv[P.INPAINT] = v.inpaint;
   if (v.adv) Object.assign(fx.adv, v.adv);
   if (v.box) fx.box = { x: v.box[0], y: v.box[1], w: v.box[2], h: v.box[3] };
+  if (v.quick) fx.quick = { ...v.quick };
   fx.seed = { mode: "keep", value: 1234 };
   const shot = { clip, night: !!v.night, scene: v.scene || "" };
   for (const scale of [1, 0.5]) {

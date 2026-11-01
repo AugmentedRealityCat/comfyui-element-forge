@@ -26,6 +26,15 @@ def _check():
 pt.interrupted = _check
 
 
+def _frame_done(i, rec, st, used):
+    own = getattr(LIVE, "on_frame", None)
+    if own is not None:
+        own(i, rec, st, used)
+
+
+pt.frame_done = _frame_done
+
+
 def _np(t):
     return t.detach().cpu().float().numpy() if torch.is_tensor(t) else np.asarray(t, np.float32)
 

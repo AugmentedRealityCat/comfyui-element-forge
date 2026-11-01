@@ -90,6 +90,30 @@ export const withoutBlack = (s) => (s || "")
   .replace(/([.!?]\s+)([a-z])/g, (m, a, b) => a + b.toUpperCase())
   .trim();
 
+export const QUICK_COLOURS = [["orange", "#ff7a1a"], ["red", "#e8202a"], ["gold", "#ffc23a"], ["green", "#38d26a"],
+  ["blue", "#2f7bff"], ["violet", "#9b5cff"], ["white", "#f2f4ff"]];
+export const QUICK = {
+  amount: { less: [0.5, "sparse"], more: [2, "dense and abundant"] },
+  speed: { slower: [0.5, "slow and gentle"], faster: [1.8, "fast and energetic"] },
+  size: { smaller: [0.6, "small"], bigger: [1.6, "big"] },
+};
+const rgbOf = (hex) => [1, 3, 5].map((i) => parseInt(String(hex).slice(i, i + 2), 16) || 0);
+export function colourName(hex) {
+  const [r, g, b] = rgbOf(hex);
+  let best = QUICK_COLOURS[0][0], bd = Infinity;
+  for (const [n, h] of QUICK_COLOURS) {
+    const [r2, g2, b2] = rgbOf(h), d = (r - r2) ** 2 + (g - g2) ** 2 + (b - b2) ** 2;
+    if (d < bd) { bd = d; best = n; }
+  }
+  return best;
+}
+export function quickWords(effect) {
+  const q = effect?.quick || {};
+  const w = q.colour ? [`mainly ${colourName(q.colour)}`] : [];
+  for (const k of ["amount", "speed", "size"]) if (QUICK[k][q[k]]) w.push(QUICK[k][q[k]][1]);
+  return w.join(", ");
+}
+
 export function composePrompt(effect) {
   return fillWord(composeRaw(effect), objectWord(effect));
 }
@@ -100,13 +124,15 @@ function composeRaw(effect) {
   const paint = inScene(effect);
   const tail = paint ? "" : data?.tail_on_black || "";
   if (effect.prompt != null) return paint ? effect.prompt : withTail(effect.prompt, tail);
-  const untouched = !changedBlocks(effect).length && effect.strength === "normal" && effect.dir == null;
+  const qw = quickWords(effect);
+  const untouched = !changedBlocks(effect).length && effect.strength === "normal" && effect.dir == null && !qw;
   if (untouched && p.preset) return paint ? withoutBlack(p.preset) : p.preset;
   const block = (k) => strip(effect.text[k] !== undefined && effect.text[k] !== "" ? effect.text[k] : p[k]);
   const lookChanged = changedBlocks(effect).includes("look");
   let what = strip((lookChanged && p.what_plain) || p.what || effect.text.what || "");
   if (!what) what = strip(effect.text.look) || "A glowing element";
   if (effect.strength !== "normal") what = `${what}, ${STRENGTH[effect.strength]}`;
+  if (qw) what = `${what}, ${qw}`;
   let action = block("motion");
   const dw = directionWords(effect.dir);
   if (dw && st.dir !== "dissolve") action = action ? `${action}, moving ${dw}` : `moves ${dw}`;

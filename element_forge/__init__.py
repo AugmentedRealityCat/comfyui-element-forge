@@ -18,7 +18,7 @@ from .generation.guides import EFGuide, EFGuideChoice, EFPlacement
 from .workflow.timing import EFMarginMask, EFPoints, EFStartAt, EFTrackPreview, EFVideoLatentMask
 from .simulation.particles_node import EFParticles, EFParticleSettings
 from .simulation.particle_depth_node import EFParticleDepthGuides
-from .tracking.mask_controls import EFLeaveOutParts, EFLeaveOutTrack, EFMaskAtFrame, EFMaskMode, EFMaskPoint, EFSelectObjectMask
+from .tracking.mask_controls import EFLeaveOutParts, EFLeaveOutTrack, EFMaskAtFrame, EFMaskFixes, EFMaskMode, EFMaskPoint, EFSelectObjectMask
 from .compositing.object_protection import EFObjectProtection, EFRestoreProtectedObject
 from .simulation.dissolve import EFCleanPlateCrop, EFCleanPlateReference, EFCleanPlateUncrop, EFCompToLayer, EFDissolve, EFDissolveBackground, EFScreen
 
@@ -32,6 +32,7 @@ NODE_CLASS_MAPPINGS = {
     "EFLeaveOutParts": EFLeaveOutParts,
     "EFLeaveOutTrack": EFLeaveOutTrack,
     "EFMaskAtFrame": EFMaskAtFrame,
+    "EFMaskFixes": EFMaskFixes,
     "EFMaskMode": EFMaskMode,
     "EFObjectProtection": EFObjectProtection,
     "EFRestoreProtectedObject": EFRestoreProtectedObject,
@@ -161,7 +162,7 @@ _TOOLS = {"EFLoadElement": "EF Load Element", "EFSaveElement": "EF Save Element"
 _TOOLS.update({"EFParticleDepthGuides": "EF Particle Depth Guides", "EFMaskPoint": "EF Mask Point",
                "EFSelectObjectMask": "EF Select Object Mask", "EFObjectProtection": "EF Object Protection",
                "EFRestoreProtectedObject": "EF Restore Protected Object", "EFLeaveOutParts": "EF Leave Out Parts",
-               "EFLeaveOutTrack": "EF Leave Out (track)", "EFMaskAtFrame": "EF Mask At Frame", "EFMaskMode": "EF Mask Mode"})
+               "EFLeaveOutTrack": "EF Leave Out (track)", "EFMaskAtFrame": "EF Mask At Frame", "EFMaskFixes": "EF Mask Fixes", "EFMaskMode": "EF Mask Mode"})
 for _name, _cls in NODE_CLASS_MAPPINGS.items():
     if _name in _TOOLS:
         _cls.CATEGORY = "Element Forge/Tools"

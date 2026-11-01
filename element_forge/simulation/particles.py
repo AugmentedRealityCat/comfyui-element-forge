@@ -8,6 +8,7 @@ import numpy as np
 REF = 1080.0
 
 interrupted = lambda: None
+frame_done = lambda i, rec, st, used: None
 
 SPIN = 114.59155902616465
 BASE = dict(
@@ -1047,6 +1048,7 @@ def simulate(P, em, seed=0, amount=1.0, target=None, flow=None, look_state=False
                 rec["vy"][i, a] = (st["vy"][a] + fy) * sz * ps * (1 - still)
                 rec["size"][i, a], rec["alpha"][i, a], rec["vis"][i, a] = size, al, vis
                 rec["age"][i, a], rec["rot"][i, a] = age, st["rot"][a]
+            frame_done(i, rec, st, used)
         live = np.nonzero(alive[:used] & ~landed[:used])[0]
         if len(live):
             x, y, z, vx, vy = (st[k][live] for k in ("x", "y", "z", "vx", "vy"))
@@ -1642,6 +1644,7 @@ def _zigzag(pts, rng, amp, ps):
 
 def make_paths(P, em, seed, target=None):
     n, fps, W, H, cam = em.n, em.fps, em.W, em.H, em.cam
+    em.crack_table = None
     ps = min(W, H) / REF
     out = [[] for _ in range(n)]
     kind = P["path"]
@@ -1792,6 +1795,10 @@ def make_paths(P, em, seed, target=None):
             if rng.uniform() < P["crack_branch"] and g < 3:
                 tips.append((nx, ny, a2 + rng.choice([-1, 1]) * rng.uniform(0.5, 1.1), ln + step * sc, g + 1))
         segs = np.array(segs, np.float64).reshape(-1, 7)
+        f0 = np.searchsorted(np.arange(n) / fps, segs[:, 4], side="left")
+        keep = f0 < n
+        em.crack_table = np.stack([f0[keep], P["width"] * ps * (np.round(segs[keep, 5] * 8) / 8), np.full(int(keep.sum()), P["opacity"]),
+                                   segs[keep, 0], segs[keep, 1], segs[keep, 2], segs[keep, 3]], 1)
         for i in range(n):
             t = i / fps
             s = segs[segs[:, 4] <= t]

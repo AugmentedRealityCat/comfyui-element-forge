@@ -239,6 +239,43 @@ def compose_prompt(presets, st, effect):
     return fill_word(_compose_raw(presets, st, effect), object_word(st, effect))
 
 
+QUICK_COLOURS = [("orange", "#ff7a1a"), ("red", "#e8202a"), ("gold", "#ffc23a"), ("green", "#38d26a"), ("blue", "#2f7bff"),
+                 ("violet", "#9b5cff"), ("white", "#f2f4ff")]
+QUICK = {"amount": {"less": (0.5, "sparse"), "more": (2, "dense and abundant")},
+         "speed": {"slower": (0.5, "slow and gentle"), "faster": (1.8, "fast and energetic")},
+         "size": {"smaller": (0.6, "small"), "bigger": (1.6, "big")}}
+
+
+def _rgb(h):
+    out = []
+    for i in (1, 3, 5):
+        try:
+            out.append(int(str(h)[i:i + 2], 16))
+        except ValueError:
+            out.append(0)
+    return out
+
+
+def colour_name(hex_):
+    r, g, b = _rgb(hex_)
+    best, bd = QUICK_COLOURS[0][0], float("inf")
+    for n, h in QUICK_COLOURS:
+        r2, g2, b2 = _rgb(h)
+        d = (r - r2) ** 2 + (g - g2) ** 2 + (b - b2) ** 2
+        if d < bd:
+            best, bd = n, d
+    return best
+
+
+def quick_words(effect):
+    q = effect.get("quick") or {}
+    w = [f"mainly {colour_name(q['colour'])}"] if q.get("colour") else []
+    for k in ("amount", "speed", "size"):
+        if q.get(k) in QUICK[k]:
+            w.append(QUICK[k][q[k]][1])
+    return ", ".join(w)
+
+
 def _compose_raw(presets, st, effect):
     p = prompt_of(st, effect)
     if not p:
@@ -248,7 +285,8 @@ def _compose_raw(presets, st, effect):
     if effect.get("prompt") is not None:
         return effect["prompt"] if paint else with_tail(effect["prompt"], tail)
     t = effect["text"]
-    untouched = not changed_blocks(st, effect) and effect.get("strength", "normal") == "normal" and effect.get("dir") is None
+    qw = quick_words(effect)
+    untouched = not changed_blocks(st, effect) and effect.get("strength", "normal") == "normal" and effect.get("dir") is None and not qw
     if untouched and p.get("preset"):
         return without_black(p["preset"]) if paint else p["preset"]
 
@@ -260,6 +298,8 @@ def _compose_raw(presets, st, effect):
         what = _strip(t.get("look")) or "A glowing element"
     if effect.get("strength", "normal") != "normal":
         what = f"{what}, {STRENGTH[effect['strength']]}"
+    if qw:
+        what = f"{what}, {qw}"
     action = block("motion")
     dw = direction_words(effect.get("dir"))
     if dw and st.get("dir") != "dissolve":
@@ -357,6 +397,13 @@ def values_for(presets, effect, shot, scale=1.0):
     v.update(effect.get("adv") or {})
     if (st.get("variant") or "app") != "app":
         v.pop(PLACEMENT, None)
+    q = effect.get("quick") or {}
+    if v.get("Particles"):
+        for k, name in (("amount", "Particle amount"), ("speed", "Particle speed"), ("size", "Particle size")):
+            if q.get(k) in QUICK[k]:
+                v[name] = fixed((v.get(name) if v.get(name) is not None else 1) * QUICK[k][q[k]][0])
+        if q.get("colour") and not v.get("Particle pro: color"):
+            v["Particle pro: color"] = q["colour"]
     return v
 
 

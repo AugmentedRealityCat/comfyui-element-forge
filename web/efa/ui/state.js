@@ -28,6 +28,7 @@ export function blankEffect(kind, style) {
     keys: { place: [], bright: [] },
     seed: { mode: "new", value: null },
     adv: {},
+    quick: {},
     paint: { mask: [], guide: [] },
   };
 }
@@ -68,7 +69,7 @@ function upgrade(s) {
   out.effects = (s.effects || []).map((e) => {
     const d = blankEffect(e.kind, e.style);
     const m = { ...d, ...e, id: e.id };
-    for (const k of ["where", "timing", "look", "place", "keys", "seed", "paint", "text"]) m[k] = { ...d[k], ...(e[k] || {}) };
+    for (const k of ["where", "timing", "look", "place", "keys", "seed", "paint", "text", "quick"]) m[k] = { ...d[k], ...(e[k] || {}) };
     return m;
   });
   return out;

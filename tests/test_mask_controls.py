@@ -270,5 +270,42 @@ class MaskTests(unittest.TestCase):
         self.assertEqual(full[0][:, 0, 0].sum().item(), 0)
 
 
+
+class MaskFixesTests(unittest.TestCase):
+    def setUp(self):
+        sys.modules['comfy_extras'] = types.ModuleType('comfy_extras')
+        sys.modules['comfy_extras.nodes_sam3'] = FakeSAM3
+        FakeSAM3.calls = []
+
+    def test_parse_merges_frames_and_drops_empty_fixes(self):
+        self.assertEqual(m.parse_fixes(''), [])
+        fx = m.parse_fixes('[{"frame": 7, "leave": "5, 5"}, {"frame": 3, "add": "10, 10"}, {"frame": 7, "add": "1, 1"}, {"frame": 9}]')
+        self.assertEqual([f['frame'] for f in fx], [3, 7])
+        self.assertEqual((len(fx[1]['add']), len(fx[1]['leave'])), (1, 1))
+        with self.assertRaises(ValueError):
+            m.parse_fixes('{"frame": 1}')
+
+    def test_no_fixes_runs_no_sam3(self):
+        whole, clean = torch.ones((4, 16, 20)), torch.ones((4, 16, 20))
+        out = m.EFMaskFixes().run(whole, clean, torch.zeros((4, 16, 20, 3)), None, ' ')
+        self.assertIs(out[0], whole)
+        self.assertIs(out[1], clean)
+        self.assertEqual(FakeSAM3.calls, [])
+
+    def test_each_fix_only_up_to_its_neighbours(self):
+        n = 10
+        whole = torch.zeros((n, 16, 20))
+        whole[:, 4:7, 4:7] = 1
+        clean = whole.clone()
+        fixes = '[{"frame": 3, "add": "12, 10"}, {"frame": 7, "leave": "5, 5"}]'
+        w2, c2 = m.EFMaskFixes().run(whole, clean, torch.zeros((n, 16, 20, 3)), None, fixes)
+        added = [bool(w2[i, 10, 12] > 0.5) for i in range(n)]
+        self.assertEqual(added, [True] * 7 + [False] * 3)
+        kept = [bool(c2[i, 5, 5] > 0.5) for i in range(n)]
+        self.assertEqual(kept, [True] * 4 + [False] * 6)
+        self.assertTrue(torch.equal(whole[:, 5, 5], torch.ones(n)))
+        with self.assertRaises(ValueError):
+            m.EFMaskFixes().run(whole, clean, torch.zeros((n, 16, 20, 3)), None, '[{"frame": 2, "add": "50, 5"}]')
+
 if __name__ == '__main__':
     unittest.main()

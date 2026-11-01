@@ -5,7 +5,9 @@ import hashlib
 import json
 import os
 import struct
+import threading
 import time
+import types
 
 import cv2
 import numpy as np
@@ -311,10 +313,15 @@ def encode(s, P, premask=True):
               "rnd": np.clip(np.round(np.asarray(rec.get("rnd", np.zeros(cap)), np.float64) * 255), 0, 255).astype(np.uint8),
               "pcol": (np.clip(np.round(np.asarray(pcol) * 255), 0, 255).astype(np.uint8).reshape(-1)
                        if pcol is not None else np.zeros(0, np.uint8))}
+    cracks = compact_cracks(paths, em, n)
+    if cracks is not None:
+        arrays["cracks"], arrays["cam"] = cracks
     pf = []
     for i in range(n if paths is not None else 0):
         for pts, w, a, _z in (paths[i] or []):
             pts = np.asarray(pts, np.float64)
+            if pts.ndim == 3 and cracks is not None:
+                continue
             if pts.ndim == 3:
                 blk = np.empty((len(pts), 9))
                 blk[:, 0], blk[:, 1], blk[:, 2] = i, 2, w
@@ -328,6 +335,50 @@ def encode(s, P, premask=True):
             pf.append(np.concatenate([[i, len(pts), w], np.stack([pts[:, 0], pts[:, 1], av], 1).reshape(-1)]))
     arrays["paths"] = np.concatenate(pf).astype(np.float32) if pf else np.zeros(0, np.float32)
     return arrays
+
+
+STREAM = threading.local()
+PART_FIRST, PART_EVERY, PART_GAP = 6, 12, 0.15
+FRAME_KEYS = ("x", "y", "z", "vx", "vy", "size", "alpha", "vis", "age", "rot", "zd")
+
+
+def _part_sender(header, P, premask, emit):
+    state = {"sent": 0, "t": 0.0}
+    STREAM.sent = 0
+
+    def on_frame(i, rec, st, used):
+        done, n = i + 1, rec["x"].shape[0]
+        new, now = done - state["sent"], time.time()
+        if done >= n or new < (PART_FIRST if not state["sent"] else PART_EVERY) or (state["sent"] and now - state["t"] < PART_GAP):
+            return
+        a = state["sent"]
+        part = {k: rec[k][a:done, :used] for k in FRAME_KEYS if k in rec}
+        part["rnd"] = st["rnd"][:used]
+        em = types.SimpleNamespace(n=done - a, W=header["W"], H=header["H"], zref=0.5)
+        arrays = encode({"rec": part, "em": em, "paths": None}, P, premask)
+        STREAM.emit(pack({**header, "n": n, "stream": "part", "from": a, "to": done}, arrays))
+        state["sent"], state["t"] = done, now
+        STREAM.sent = done
+    return on_frame
+
+
+def frames_from(arrays, a):
+    offs = arrays["offs"].astype(np.int64)
+    k = int(offs[a])
+    out = dict(arrays)
+    out["offs"] = (offs[a:] - k).astype(np.uint32)
+    for name in ("id", "x", "y", "r", "a", "age", "vx", "vy", "rot"):
+        out[name] = arrays[name][k:]
+    return out
+
+
+def compact_cracks(paths, em, n):
+    tab, cam = getattr(em, "crack_table", None), getattr(em, "cam", None)
+    if paths is None or cam is None or tab is None or not len(tab):
+        return None
+    tab = tab[np.argsort(tab[:, 0], kind="stable")]
+    mats = np.array([np.asarray(cam.m[i], np.float64)[:2].reshape(-1) for i in range(n)], np.float32).reshape(-1)
+    return tab.astype(np.float32).reshape(-1), mats
 
 
 def pack(header, arrays):
@@ -662,7 +713,13 @@ async def compute(body, check):
             pstats.Stats(prof, stream=out).sort_stats("cumtime").print_stats(18)
             header["profile"] = out.getvalue()[-6000:]
         else:
-            s = PN.setup(**args, cam=cam, memo=memo)
+            on = STREAM.__dict__.get("emit")
+            if on is not None:
+                PN.LIVE.on_frame = _part_sender(header, P, bool(args["premask"]), on)
+            try:
+                s = PN.setup(**args, cam=cam, memo=memo)
+            finally:
+                PN.LIVE.on_frame = None
         s["plate"] = args["plate"]
         s.pop("pl", None)
         s["em"].memo = None
@@ -676,6 +733,10 @@ async def compute(body, check):
         s["rec"]["pcol"] = pt.plate_colours(s["rec"], PN._np(s["plate"])[..., :3])
     t_sim = time.time() - t1
     arrays = encode(s, P, bool(args["premask"]))
+    sent = STREAM.__dict__.get("sent", 0)
+    if sent:
+        arrays = frames_from(arrays, sent)
+        header.update(stream="end", **{"from": sent, "to": int(s["n"])})
     st = s["rec"].get("stats", {})
     header.update(n=int(s["n"]), preroll_s=round(preroll_seconds(s["P"], s["em"]), 3), stats={k: int(v) for k, v in st.items() if isinstance(v, (int, np.integer))},
                   ms={"inputs": round(t_inputs * 1000), "sim": round(t_sim * 1000), "total": round((time.time() - t0) * 1000)},
@@ -683,15 +744,17 @@ async def compute(body, check):
     return header, arrays
 
 
-def _job(seq, body):
+def _job(seq, body, emit=None):
     def check():
         if LATEST[0] != seq:
             raise Superseded()
     PN.LIVE.check = check
+    STREAM.emit, STREAM.sent = emit, 0
     try:
         return pack(*asyncio.run(compute(body, check)))
     finally:
         PN.LIVE.check = None
+        STREAM.emit, STREAM.sent = None, 0
         RUNNER.trim()
 
 
@@ -718,6 +781,8 @@ async def ef_live(request):
     body = await request.json()
     LATEST[0] += 1
     seq = LATEST[0]
+    if body.get("stream"):
+        return await _live_stream(request, seq, body)
     try:
         data = await asyncio.get_running_loop().run_in_executor(WORKER, _job, seq, body)
     except Superseded:
@@ -728,6 +793,32 @@ async def ef_live(request):
     resp.headers["Cache-Control"] = "no-store"
     if not _local(request):
         resp.enable_compression()
+    return resp
+
+
+async def _live_stream(request, seq, body):
+    loop = asyncio.get_running_loop()
+    q = asyncio.Queue()
+    put = lambda b: loop.call_soon_threadsafe(q.put_nowait, b)
+    fut = loop.run_in_executor(WORKER, _job, seq, body, put)
+    fut.add_done_callback(lambda f: loop.call_soon_threadsafe(q.put_nowait, None))
+    resp = web.StreamResponse(headers={"Content-Type": "application/x-ef-live-stream", "Cache-Control": "no-store"})
+    if not _local(request):
+        resp.enable_compression()
+    await resp.prepare(request)
+    while True:
+        b = await q.get()
+        if b is None:
+            break
+        await resp.write(struct.pack("<I", len(b)) + b)
+    try:
+        last = fut.result()
+    except Superseded:
+        last = pack({"error": "superseded", "status": 409}, None)
+    except (ValueError, KeyError, Missing) as e:
+        last = pack({"error": str(e), "status": 400}, None)
+    await resp.write(struct.pack("<I", len(last)) + last)
+    await resp.write_eof()
     return resp
 
 
