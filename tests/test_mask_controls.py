@@ -4,6 +4,7 @@ import sys
 import types
 import unittest
 
+import numpy as np
 import torch
 
 ROOT = Path(__file__).resolve().parents[1] / 'element_forge'
@@ -173,6 +174,16 @@ class SteadyTests(unittest.TestCase):
         self.assertEqual(float(out[3, 8:24, 10:30].min()), 1.0)
         self.assertEqual(float(out[5, 8:24, 10:12].min()), 1.0)
         self.assertEqual(float(out[:, :8].max()), 0.0)
+
+    def test_hysteresis_keeps_weak_parts_touching_the_core(self):
+        t = importlib.import_module(package.__name__ + '.compositing.temporal')
+        avg = np.zeros((1, 10, 20), np.float32)
+        avg[0, 2:8, 2:6] = 0.8
+        avg[0, 2:8, 6:10] = 0.4
+        avg[0, 2:8, 14:18] = 0.4
+        out = t.hysteresis(avg, 0.65, 0.3)
+        self.assertTrue(out[0, 2:8, 2:10].all())
+        self.assertFalse(out[0, :, 12:].any())
 
 
 class MaskTests(unittest.TestCase):

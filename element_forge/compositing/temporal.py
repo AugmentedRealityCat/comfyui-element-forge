@@ -164,14 +164,15 @@ class EFMaskSteady:
             "mask": ("MASK", {"tooltip": "The object's mask per frame (SAM3 track)."}),
             "plate": ("IMAGE", {"tooltip": "The plate the mask belongs to; the motion is measured on it."}),
             "radius": ("INT", {"default": 0, "min": 0, "max": 8, "tooltip": "Neighbour frames on each side that are aligned and averaged. 0 = off (the mask as it is)."}),
-            "threshold": ("FLOAT", {"default": 0.5, "min": 0.05, "max": 0.95, "step": 0.05, "tooltip": "Where the averaged mask is cut again: lower keeps more of the object, higher less."}),
+            "threshold": ("FLOAT", {"default": 0.5, "min": 0.05, "max": 0.95, "step": 0.05, "tooltip": "Where the averaged mask is cut again: lower keeps more of the object, higher less. Sure parts (0.15 above) keep the less sure ones (down to 0.2 below) that touch them."}),
         }}
 
     RETURN_TYPES = ("MASK",)
     FUNCTION = "steady"
     CATEGORY = "Element Forge/Post"
     DESCRIPTION = ("Less flicker in an object mask where the object blurs or the light is poor: every frame is averaged with its "
-                   "neighbours after aligning them with the plate's optical flow, then cut sharp again. 0 = off.")
+                   "neighbours after aligning them with the plate's optical flow, then cut sharp again with two thresholds, "
+                   "so a fast object keeps its less sure edges where they touch its sure core. 0 = off.")
 
     def steady(self, mask, plate, radius, threshold=0.5):
         m = mask if mask.ndim == 3 else mask[None]
@@ -186,7 +187,19 @@ class EFMaskSteady:
         gray = np.stack([cv2.resize((pl[min(i, len(pl) - 1)] @ LUMA).astype(np.float32), size, interpolation=cv2.INTER_AREA)
                          for i in range(n)])
         avg = EFDeflicker().temporal(x, gray, int(radius))[..., 0]
-        return (to_t((avg >= threshold).astype(np.float32)),)
+        return (to_t(hysteresis(avg, min(0.95, threshold + 0.15), max(0.05, threshold - 0.2)).astype(np.float32)),)
+
+
+def hysteresis(avg, high, low):
+    out = np.zeros(avg.shape, bool)
+    for t, a in enumerate(avg):
+        n, lab = cv2.connectedComponents((a >= low).astype(np.uint8), connectivity=8)
+        if n > 1:
+            keep = np.zeros(n, bool)
+            keep[np.unique(lab[a >= high])] = True
+            keep[0] = False
+            out[t] = keep[lab]
+    return out
 
 
 class EFFreeVRAM:
