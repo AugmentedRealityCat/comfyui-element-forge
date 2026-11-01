@@ -1,4 +1,3 @@
-"""Particle surface depth for LTX guidance. Relative inverse depth, larger is nearer."""
 import numpy as np
 import cv2
 
@@ -15,11 +14,6 @@ def crop_frames(frames, raster):
 
 
 def particle_surfaces(sim, raster, pt, minimum_radius=1.5):
-    """Nearest particle surface and separate coverage. No opacity or density in Z.
-
-    Sphere sprites are an approximation of transparent particles, not volumetric depth.
-    Uses current camera-adjusted zd when present, rather than birth-space z.
-    """
     rec, P = sim['rec'], sim['P']
     zs = rec.get('zd', rec['z'])
     depth = np.zeros((sim['n'], raster.h, raster.w), np.float32)
@@ -30,7 +24,6 @@ def particle_surfaces(sim, raster, pt, minimum_radius=1.5):
         alpha = pt.frame_alpha(P, rec, i, ids, raster, sim['edge_fade'], premask=False)
         rx, ry = raster.map(i, rec['x'][i, ids], rec['y'][i, ids])
         radii = np.maximum(rec['size'][i, ids] * raster.scale(i) * .6, minimum_radius)
-        # Near surfaces overwrite farther surfaces; their coverage remains independent.
         for j in np.argsort(zs[i, ids]):
             if alpha[j] <= .02:
                 continue
@@ -49,7 +42,6 @@ def particle_surfaces(sim, raster, pt, minimum_radius=1.5):
 
 
 def combine_depth(scene, particle, coverage, object_mask=None, tolerance=.01):
-    """One clip-wide scale for both branches; Z-test before masked guide composition."""
     scene = np.asarray(scene, np.float32)
     particle = np.asarray(particle, np.float32)
     coverage = np.clip(np.asarray(coverage, np.float32), 0, 1)
@@ -70,7 +62,6 @@ def combine_depth(scene, particle, coverage, object_mask=None, tolerance=.01):
     obj = np.ones_like(scene) if object_mask is None else np.clip(object_mask, 0, 1)
     if obj.shape != scene.shape:
         raise ValueError('Object mask must align with depth frames.')
-    # The guide is an image representation. Raw Z is available separately.
     obj_guide = scene_n * obj
     part_guide = particle_n * cov
     merged = obj_guide * (1-cov) + part_guide
@@ -92,3 +83,18 @@ def make_guides(sim, scene_depth, object_mask, raster, pt, minimum_radius=1.5, t
     result = combine_depth(scene, raw, cov, mask, tolerance)
     result['object_mask'] = np.ones_like(scene) if mask is None else mask
     return result
+
+
+def inner_edge(object_mask, width):
+    kernel = np.ones((2 * width + 1, 2 * width + 1), np.uint8)
+    return np.stack([np.clip(m - cv2.erode(m, kernel), 0, 1) for m in object_mask])
+
+
+def path_lines(paths, raster, pt, n, P):
+    out = np.zeros((n, raster.h, raster.w), np.float32)
+    for i in range(n):
+        if paths[i]:
+            sp = pt.Splats()
+            pt._draw_paths(sp, paths[i], raster, i, "lines", P)
+            out[i] = np.clip(sp.render(raster.h, raster.w)[..., 3], 0, 1)
+    return out

@@ -816,6 +816,10 @@
    "positive_coords": [
     "108",
     5
+   ],
+   "negative_coords": [
+    "903",
+    1
    ]
   },
   "_meta": {
@@ -868,6 +872,10 @@
    "positive_coords": [
     "108",
     5
+   ],
+   "negative_coords": [
+    "903",
+    1
    ]
   },
   "_meta": {
@@ -1141,6 +1149,278 @@
    "title": "One object or two by the word?"
   }
  },
+ "901": {
+  "class_type": "PrimitiveString",
+  "inputs": {
+   "value": ""
+  },
+  "_meta": {
+   "title": "Leave out: points (x, y; Alt-click in the app)"
+  }
+ },
+ "902": {
+  "class_type": "PrimitiveString",
+  "inputs": {
+   "value": ""
+  },
+  "_meta": {
+   "title": "Leave out: words (e.g. hand; handle)"
+  }
+ },
+ "903": {
+  "class_type": "EFLeaveOutParts",
+  "inputs": {
+   "image": [
+    "178",
+    0
+   ],
+   "model": [
+    "177",
+    0
+   ],
+   "clip": [
+    "177",
+    1
+   ],
+   "points": [
+    "901",
+    0
+   ],
+   "words": [
+    "902",
+    0
+   ],
+   "keep_coords": [
+    "108",
+    5
+   ],
+   "threshold": 0.4
+  },
+  "_meta": {
+   "title": "Parts left out (first frame)"
+  }
+ },
+ "904": {
+  "class_type": "EFLeaveOutTrack",
+  "inputs": {
+   "mask": [
+    "926",
+    0
+   ],
+   "left_out": [
+    "927",
+    0
+   ],
+   "images": [
+    "167",
+    0
+   ],
+   "model": [
+    "177",
+    0
+   ],
+   "reference_frame": [
+    "921",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Object mask without the parts left out"
+  }
+ },
+ "921": {
+  "class_type": "PrimitiveInt",
+  "inputs": {
+   "value": 0
+  },
+  "_meta": {
+   "title": "Mask frame (the frame the mask is set on; 0 = the first)"
+  }
+ },
+ "922": {
+  "class_type": "PrimitiveString",
+  "inputs": {
+   "value": ""
+  },
+  "_meta": {
+   "title": "Mask: add points (x, y; Ctrl-click in the app)"
+  }
+ },
+ "923": {
+  "class_type": "PrimitiveString",
+  "inputs": {
+   "value": ""
+  },
+  "_meta": {
+   "title": "Mask: add words (e.g. blade; tip)"
+  }
+ },
+ "924": {
+  "class_type": "EFMaskMode",
+  "inputs": {
+   "mask_frame": [
+    "921",
+    0
+   ],
+   "add_points": [
+    "922",
+    0
+   ],
+   "add_words": [
+    "923",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Mask set on a frame of its own or with more points / words?"
+  }
+ },
+ "925": {
+  "class_type": "EFMaskAtFrame",
+  "inputs": {
+   "images": [
+    "167",
+    0
+   ],
+   "model": [
+    "177",
+    0
+   ],
+   "clip": [
+    "177",
+    1
+   ],
+   "mask_frame": [
+    "921",
+    0
+   ],
+   "add_points": [
+    "922",
+    0
+   ],
+   "word": [
+    "109",
+    0
+   ],
+   "add_words": [
+    "923",
+    0
+   ],
+   "leave_points": [
+    "901",
+    0
+   ],
+   "leave_words": [
+    "902",
+    0
+   ],
+   "threshold": 0.4,
+   "track_video": true,
+   "use_own_mask": [
+    "111",
+    0
+   ],
+   "a_coords": [
+    "108",
+    5
+   ],
+   "own_mask": [
+    "185",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Object mask from the mask frame (both ways)"
+  }
+ },
+ "926": {
+  "class_type": "ComfySwitchNode",
+  "inputs": {
+   "switch": [
+    "924",
+    0
+   ],
+   "on_false": [
+    "197",
+    0
+   ],
+   "on_true": [
+    "925",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Mask: the click on the first frame or the mask frame?"
+  }
+ },
+ "927": {
+  "class_type": "ComfySwitchNode",
+  "inputs": {
+   "switch": [
+    "924",
+    0
+   ],
+   "on_false": [
+    "903",
+    0
+   ],
+   "on_true": [
+    "925",
+    1
+   ]
+  }
+ },
+ "928": {
+  "class_type": "PrimitiveInt",
+  "inputs": {
+   "value": 0
+  },
+  "_meta": {
+   "title": "Mask: steady over frames (0 = off)"
+  }
+ },
+ "929": {
+  "class_type": "EFMaskSteady",
+  "inputs": {
+   "mask": [
+    "904",
+    0
+   ],
+   "plate": [
+    "167",
+    0
+   ],
+   "radius": [
+    "928",
+    0
+   ],
+   "threshold": 0.5
+  },
+  "_meta": {
+   "title": "Object mask, steady"
+  }
+ },
+ "930": {
+  "class_type": "EFMaskSteady",
+  "inputs": {
+   "mask": [
+    "926",
+    0
+   ],
+   "plate": [
+    "167",
+    0
+   ],
+   "radius": [
+    "928",
+    0
+   ],
+   "threshold": 0.5
+  },
+  "_meta": {
+   "title": "Whole object mask, steady"
+  }
+ },
  "198": {
   "class_type": "EFTrackROI",
   "inputs": {
@@ -1344,7 +1624,7 @@
   "class_type": "EFMaskTrack",
   "inputs": {
    "mask": [
-    "197",
+    "929",
     0
    ],
    "point": "centroid",
@@ -1433,7 +1713,7 @@
     0
    ],
    "mask": [
-    "197",
+    "929",
     0
    ],
    "object": "all",
@@ -1560,7 +1840,7 @@
   "class_type": "MaskComposite",
   "inputs": {
    "destination": [
-    "197",
+    "929",
     0
    ],
    "source": [
@@ -1711,7 +1991,7 @@
     0
    ],
    "mask": [
-    "197",
+    "929",
     0
    ]
   },
@@ -1906,7 +2186,7 @@
     0
    ],
    "mask": [
-    "197",
+    "929",
     0
    ],
    "drawing": [
@@ -2223,7 +2503,7 @@
     1
    ],
    "object_mask": [
-    "197",
+    "929",
     0
    ],
    "track": [
@@ -3706,7 +3986,7 @@
     0
    ],
    "object_mask": [
-    "197",
+    "906",
     0
    ],
    "object_in_front": [
@@ -3782,7 +4062,7 @@
    "layer_is": "rgba (EF Unmult)",
    "edge_feather": 0.06,
    "holdout": [
-    "236",
+    "909",
     0
    ],
    "blend_from": [
@@ -3802,7 +4082,7 @@
     0
    ],
    "on_false": [
-    "336",
+    "911",
     0
    ],
    "on_true": [
@@ -3822,8 +4102,8 @@
     0
    ],
    "on_false": [
-    "336",
-    1
+    "912",
+    0
    ],
    "on_true": [
     "337",
@@ -4147,7 +4427,7 @@
     0
    ],
    "mask": [
-    "197",
+    "929",
     0
    ],
    "object": "all",
@@ -4189,7 +4469,7 @@
     0
    ],
    "mask": [
-    "197",
+    "929",
     0
    ],
    "object": "all",
@@ -4228,7 +4508,7 @@
     6
    ],
    "mask": [
-    "197",
+    "929",
     0
    ],
    "object": "all",
@@ -4451,7 +4731,7 @@
     0
    ],
    "mask": [
-    "197",
+    "929",
     0
    ],
    "object": "all",
@@ -4564,7 +4844,7 @@
     0
    ],
    "mask": [
-    "197",
+    "929",
     0
    ],
    "object": "all",
@@ -5119,7 +5399,7 @@
     1
    ],
    "holdout": [
-    "236",
+    "909",
     0
    ]
   },
@@ -5135,7 +5415,7 @@
     0
    ],
    "on_false": [
-    "399",
+    "914",
     0
    ],
    "on_true": [
@@ -5155,8 +5435,8 @@
     0
    ],
    "on_false": [
-    "399",
-    1
+    "915",
+    0
    ],
    "on_true": [
     "400",
@@ -5463,7 +5743,7 @@
     0
    ],
    "mask": [
-    "197",
+    "929",
     0
    ],
    "blur": 0.012,
@@ -5726,7 +6006,7 @@
     0
    ],
    "mask": [
-    "197",
+    "929",
     0
    ],
    "padding": 0.08
@@ -5946,7 +6226,7 @@
     0
    ],
    "mask": [
-    "197",
+    "929",
     0
    ],
    "direction": [
@@ -6007,7 +6287,7 @@
     0
    ],
    "mask": [
-    "197",
+    "929",
     0
    ],
    "direction": [
@@ -6781,7 +7061,7 @@
    "animation": "still",
    "line_width": 3,
    "object_mask": [
-    "197",
+    "929",
     0
    ],
    "depth": [
@@ -7505,7 +7785,7 @@
     0
    ],
    "mask": [
-    "197",
+    "929",
     0
    ],
    "drawing": [
@@ -7625,7 +7905,7 @@
     0
    ],
    "mask": [
-    "197",
+    "929",
     0
    ],
    "background": [
@@ -7651,6 +7931,228 @@
    "title": "Object in front (its mask hides the element)"
   }
  },
+ "905": {
+  "class_type": "PrimitiveBoolean",
+  "inputs": {
+   "value": true
+  },
+  "_meta": {
+   "title": "Object in front: also the parts left out"
+  }
+ },
+ "906": {
+  "class_type": "ComfySwitchNode",
+  "inputs": {
+   "switch": [
+    "905",
+    0
+   ],
+   "on_false": [
+    "929",
+    0
+   ],
+   "on_true": [
+    "930",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "In front: the whole object or without the parts left out?"
+  }
+ },
+ "907": {
+  "class_type": "EFObjectProtection",
+  "inputs": {
+   "object_mask": [
+    "906",
+    0
+   ],
+   "grow_pixels": 1,
+   "feather_pixels": 2.0,
+   "threshold": 0.5
+  },
+  "_meta": {
+   "title": "Object in front: the effect only outside the object"
+  }
+ },
+ "908": {
+  "class_type": "MaskComposite",
+  "inputs": {
+   "destination": [
+    "236",
+    0
+   ],
+   "source": [
+    "907",
+    0
+   ],
+   "x": 0,
+   "y": 0,
+   "operation": "multiply"
+  },
+  "_meta": {
+   "title": "Holdout x object in front"
+  }
+ },
+ "909": {
+  "class_type": "ComfySwitchNode",
+  "inputs": {
+   "switch": [
+    "891",
+    0
+   ],
+   "on_false": [
+    "236",
+    0
+   ],
+   "on_true": [
+    "908",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Object in front?"
+  }
+ },
+ "910": {
+  "class_type": "EFPlaceLayer",
+  "inputs": {
+   "plate": [
+    "169",
+    0
+   ],
+   "layer_linear": [
+    "335",
+    0
+   ],
+   "track": [
+    "218",
+    0
+   ],
+   "gain": 1.0,
+   "layer_is": "rgba (EF Unmult)",
+   "edge_feather": 0.06,
+   "holdout": [
+    "907",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "In the window (guide / motion), object in front"
+  }
+ },
+ "911": {
+  "class_type": "ComfySwitchNode",
+  "inputs": {
+   "switch": [
+    "891",
+    0
+   ],
+   "on_false": [
+    "336",
+    0
+   ],
+   "on_true": [
+    "910",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Object in front?"
+  }
+ },
+ "912": {
+  "class_type": "ComfySwitchNode",
+  "inputs": {
+   "switch": [
+    "891",
+    0
+   ],
+   "on_false": [
+    "336",
+    1
+   ],
+   "on_true": [
+    "910",
+    1
+   ]
+  },
+  "_meta": {
+   "title": "Object in front?"
+  }
+ },
+ "913": {
+  "class_type": "EFPlaceLayer",
+  "inputs": {
+   "plate": [
+    "169",
+    0
+   ],
+   "layer_linear": [
+    "398",
+    0
+   ],
+   "track": [
+    "353",
+    2
+   ],
+   "gain": 1.0,
+   "layer_is": "linear premultiplied",
+   "edge_feather": 0.06,
+   "blend": "add",
+   "alpha": [
+    "398",
+    1
+   ],
+   "holdout": [
+    "907",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Back into the plate, object in front"
+  }
+ },
+ "914": {
+  "class_type": "ComfySwitchNode",
+  "inputs": {
+   "switch": [
+    "891",
+    0
+   ],
+   "on_false": [
+    "399",
+    0
+   ],
+   "on_true": [
+    "913",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Object in front?"
+  }
+ },
+ "915": {
+  "class_type": "ComfySwitchNode",
+  "inputs": {
+   "switch": [
+    "891",
+    0
+   ],
+   "on_false": [
+    "399",
+    1
+   ],
+   "on_true": [
+    "913",
+    1
+   ]
+  },
+  "_meta": {
+   "title": "Object in front?"
+  }
+ },
  "892": {
   "class_type": "PrimitiveBoolean",
   "inputs": {
@@ -7664,7 +8166,7 @@
   "class_type": "MaskToImage",
   "inputs": {
    "mask": [
-    "197",
+    "929",
     0
    ]
   },

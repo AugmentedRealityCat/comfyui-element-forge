@@ -461,4 +461,26 @@ try:
 except ValueError as err_:
     bad_ = str(err_)
 check(bad_ and "no_such" in bad_, "emitter panel: an unknown name is named in the error")
+dg = EFParticles().run(plate, "sparks", "point A", track=trA, mask=m, depth=depth, camera="fixed", settings={"guide_style": "depth"}, **args)
+dv = EFParticles().run(plate, "sparks", "point A", track=trA, mask=m, depth=depth, camera="fixed", settings={"guide_style": "volume"}, **args)
+g_d = dg[0].numpy()
+check(g_d.shape == (n, H, W, 3) and np.allclose(g_d[..., 0], g_d[..., 2]) and float(g_d[:, 100, 150, 0].min()) > 0.05
+      and float(g_d[:, 20, 20].max()) == 0, "depth guide: the object's depth inside its mask, black outside it")
+check(np.array_equal(dg[4].numpy(), dv[4].numpy()) and np.array_equal(dg[9].numpy(), dv[9].numpy()), "depth guide: seed and holdout as with any other guide")
+ds = EFParticles().run(plate, "sparks", "point A", track=trA, mask=m, depth=depth, camera="fixed",
+                       settings={"guide_style": "depth", "depth_guide": "scene"}, **args)[0].numpy()
+check(float(ds[:, 20, 20].min()) > 0.05, "depth guide of the scene: depth everywhere")
+de = EFParticles().run(plate, "sparks", "point A", track=trA, mask=m, depth=depth, camera="fixed",
+                       settings={"guide_style": "depth", "depth_edge": 2}, **args)[0].numpy()
+inside = (dv[0].numpy()[..., 0] == 0)[:, 90:150, 130:210]
+check(float(de[:, 90:150, 130:210, 0][inside].max()) == 0 and float(g_d[:, 90:150, 130:210, 0][inside].min()) > 0.05
+      and float(de[:, 81, 200, 0].min()) > 0.05, "depth guide, inner edge: of the object only its edge")
+db = EFParticles().run(plate, "lightning", "point A", track=trA, track_b=trB, mask=m, depth=depth, settings={"guide_style": "depth"}, **args)[0]
+check(float(db.max()) > 0.5, "depth guide with a path: the bolt drawn over it as lines")
+try:
+    EFParticles().run(plate, "sparks", "point A", track=trA, depth=depth, settings={"guide_style": "depth"}, **args)
+    bad_ = None
+except ValueError as err_:
+    bad_ = str(err_)
+check(bad_ and "object" in bad_, "depth guide of the object without a mask: says to click the object")
 print(f"{ok} checks passed")

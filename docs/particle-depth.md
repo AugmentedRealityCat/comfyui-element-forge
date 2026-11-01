@@ -1,6 +1,6 @@
 # Particle depth and mask tools (experimental)
 
-These nodes are available under **Element Forge / Tools**. They do not yet replace the app's selection panel or its saved-track cache. The example workflow **Particle Depth Tools** prepares masks and guides; connect its outputs to your LTX workflow after reviewing them.
+These nodes are available under **Element Forge / Tools**. The app uses the same parts (see **In the app** below); the example workflow **Particle Depth Tools** prepares masks and guides for a graph of your own; connect its outputs to your LTX workflow after reviewing them.
 
 ## Keep four different jobs separate
 
@@ -36,7 +36,7 @@ The automatic result needs inspection. Word detection can select clothing when a
 - `guide_content`: selected object or full scene. This never changes the emission mask or simulation depth.
 - `object_shape`: full selected object or a narrow inner edge. Edge width is measured in guide pixels; use full object for a full-scene guide.
 
-Both depth branches use one fixed scale across the clip. Particle surfaces behind the scene are removed before the guides are combined. The inner-edge option changes only the object's guidance; particle guidance is unchanged. Sprite surfaces are approximated as discs. Bolt, climb and crack path renderers are not supported by this depth node and produce an explicit error.
+Both depth branches use one fixed scale across the clip. Particle surfaces behind the scene are removed before the guides are combined. The inner-edge option changes only the object's guidance; particle guidance is unchanged. Sprite surfaces are approximated as discs. A bolt, climb or crack path has no depth surface; it is drawn over the guide as thin lines, as in the lines guide.
 
 Full-scene guides may encourage LTX to reconstruct the surrounding person or background. The full-scene option has been checked for guide construction and unchanged particle simulation, not established as better by a paired LTX comparison. Selected-object merged guidance remains the tested starting point. Two separate guides can impose a much stronger combined constraint.
 
@@ -65,6 +65,10 @@ Tested composition used black point 0.03, linear additive placement, effect gain
 
 Total pipeline durations include model loading, text encoding, cached nodes, generation and compositing. Reusing an effect skips LTX entirely. Do not interpret those totals as a controlled guide-speed benchmark.
 
-## App integration still required
+## In the app
 
-The app should expose emission selection and its exclusions on the canvas, a reference-frame selector, mask preview/corrections, guide content/shape and independent original-object protection. Keep full scene depth connected to simulation, visibility and lighting. All new selection inputs must enter both frontend and backend saved-track cache keys. Changes to points, exclusion words, reference frame or manual masks must invalidate stale selection results. This branch adds ordinary node controls and callable implementations; it does not claim that these controls are already in the app panel.
+- **Position → Object → Mask frame, Add, Leave out**: the frame the mask is set on (**Use this frame** at the playhead), points and words to add (Ctrl-click) and to leave out (Alt-click). The mask frame shows the tracked object in blue and the parts left out in red. In the one workflow these are the settings **Mask frame**, **Mask: add points**, **Mask: add words**, **Leave out: points** (`x, y; x, y` in pixels of the clip) and **Leave out: words**. On the first frame without added points or words, the click's own chain runs as before and **EF Leave Out Parts** / **EF Leave Out (track)** take the parts out; otherwise **EF Mask At Frame** (chosen by **EF Mask Mode**) finds everything on the mask frame and tracks it both ways. Everything after it (emitter, window, dissolve, mask pass) uses the mask without them; the depth stays the full scene's. A saved track keeps the parts left out with it.
+- **Position → Object → In front of the effect**: for every placement. **The parts left out are in front too** picks the whole object (default) or only what is left. In the area this is **EF Object Protection** on the placement's holdout.
+- **Effect → Source → Drawn for the AI as: Depth**: the merged guide of EF Particle Depth Guides, made inside EF Particles from its own simulation (guide style `depth`). **Depth shows** (`depth_guide`: object / scene) and **Object as** (`depth_edge`: 0 = whole object, else the inner edge's width in guide pixels).
+
+With a mask frame of its own, **All alike** and two objects by the word (A and B) do not apply; the strict restore after glow is available as a node in a graph of your own.

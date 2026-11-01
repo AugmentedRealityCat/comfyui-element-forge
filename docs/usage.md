@@ -118,7 +118,11 @@ Click where the effect belongs, then choose under **Follows**:
 - **Object word**<br>Optional. A word such as *hand* or *staff* helps the click find the right object.
 - **All alike**<br>Follows every object that matches the word, e.g. all candles or all points of a crown. Off, only the clicked one is followed.
 - **Paint it yourself**<br>When the click misses parts (a raised arm, a crown), paint the object in the first frame with the brush. The track follows your mask.
-- **In front of the effect**<br>The object's mask cuts the effect out wherever the object is, whatever the depth says: a person in front of a portal.
+- **Mask frame**<br>The frame the mask is set on; normally the first. When the object is not fully in view there (a blade still in its sheath), move the playhead to a frame where it is and press **Use this frame**; **Go there** brings the playhead back to it. The track then runs from that frame to the start and to the end of the clip. The points below belong to the mask frame; choosing another frame clears them.
+- **Add**<br>More of the object: words (*blade; tip*), or **Click to add** and click each part in the canvas; **Ctrl-click** works at any time. Green rings; a click on a ring takes it away. Words and points add up.
+- **Leave out**<br>Parts of the object that should not give off the effect: a hand on a handle, a sheath. Words (*hand; handle*), or **Click to leave out** and click each part; **Alt-click** works at any time. Red rings. The mask frame shows what is tracked in blue and the parts left out in red. They are tracked through the clip and taken out of the object's mask; the depth and the rest of the clip stay as they are, so particles still fly over the hand.
+- **Steady mask**<br>Off, **Light** or **Strong**: each frame's mask is averaged with its neighbours along the motion, so it flickers less where the object blurs or the light is poor, and a frame that loses the object takes it from its neighbours. Strong can round off fast, thin parts. The kept track stays as it was tracked.
+- **In front of the effect**<br>The object's mask cuts the effect out wherever the object is, whatever the depth says: a person in front of a portal. Works for every placement; in the area the effect fades out over a few pixels outside the object. With parts left out, **The parts left out are in front too** decides whether the whole object hides the effect (on) or only what is left (off).
 - **Base stays on the point** <sub>Advanced</sub><br>The AI draws an effect a little differently in every frame, so its base can jitter. On, the base stays fixed on the tracked point while the effect still moves above it.
 
 ### Two points
@@ -360,7 +364,7 @@ Shown in **Effect** in Advanced mode. Values left alone keep the style's tested 
 
 | Group | Controls |
 |:---|:---|
-| **Source** | Emitter shape and size, maximum particles alive at once |
+| **Source** | Guide for the AI and how the particles are drawn for it (lines, volume, heat, depth), the particles it starts from, emitter shape and size, maximum particles alive at once |
 | **Emission** | Rate, burst and when it comes, timing, pre-roll |
 | **Motion** | Direction mode (angle, outward, against motion, random) and direction, spread, speed and its variation, lift; how far the particles follow the emitter (strength, lag) and how much the clip carries them; bunch to the centre of the spread, speed at the end of the life, speed limit |
 | **Particle** | Life, size and their variation, size at birth and at the end, colour over life and its variation, sprite, trail, glow, flicker (speed, by size), small particles (share, size, speed, life), fade in and out, motion blur, opacity, spin |
@@ -369,6 +373,8 @@ Shown in **Effect** in Advanced mode. Values left alone keep the style's tested 
 | **Contact & depth** | Collision (none, bounce, stick, slide, die), bounce, friction, lying time of sticking particles, depth offset and spread, hidden by the scene |
 
 **Calm particles**: lower the speed, set **Speed at the end** below 1 so they come to rest, a **Speed limit**, **Spin** 0, and **Drag calms turbulence** or **Turbulence fades in** so the swirl does not take over. For AI styles (fire, orb, your own effect) the speed is set by the AI; set the guide to **Particles** to get the emitter's speed.
+
+**Drawn for the AI as: Depth** gives the AI the clip's depth of the clicked object, with the particles' surfaces wherever they are in front of it: one guide from the same simulation. **Depth shows** picks the object or the whole scene (the AI may then redraw the background); **Object as** the whole object or only a thin **Inner edge** (width in pixels), so the AI follows the outline and builds less of a body. It needs the object's track; a bolt, a climb or cracks are drawn over it as lines.
 
 Lightning paths have their own look (width, glow, jaggedness, branches, new shape every few frames); Dissolve has its own emission, motion, particle and force controls.
 

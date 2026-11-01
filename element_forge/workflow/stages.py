@@ -50,7 +50,7 @@ GUIDE_CHOICES = ["style default", "none", "object shape", "drawn path", "particl
 DEPTH_MODELS = ["Video Depth Anything", "DepthCrafter"]
 UNPACK = (("plate", "IMAGE"), ("depth", "IMAGE"), ("normals", "IMAGE"), ("object mask", "MASK"), ("element", "IMAGE"),
           ("element alpha", "MASK"), ("light", "IMAGE"), ("glow", "IMAGE"), ("comp", "IMAGE"), ("fps", "FLOAT"))
-SOURCES = {"plate": ("169", 0), "depth": ("176", 0), "normals": ("409", 0), "object mask": ("197", 0), "element": ("407", 0),
+SOURCES = {"plate": ("169", 0), "depth": ("176", 0), "normals": ("409", 0), "object mask": ("929", 0), "element": ("407", 0),
            "light": ("411", 0), "glow": ("413", 1), "comp": ("473", 0), "fps": ("167", 2)}
 DISSOLVE_SOURCES = {"element": ("476", 0), "element alpha": ("476", 1), "light": ("703", 0)}
 ELEMENT_RGBA = "327"

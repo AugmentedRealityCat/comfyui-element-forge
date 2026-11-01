@@ -157,6 +157,38 @@ class EFDeflicker:
         return (to_t(x), to_t(out_comp))
 
 
+class EFMaskSteady:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "mask": ("MASK", {"tooltip": "The object's mask per frame (SAM3 track)."}),
+            "plate": ("IMAGE", {"tooltip": "The plate the mask belongs to; the motion is measured on it."}),
+            "radius": ("INT", {"default": 0, "min": 0, "max": 8, "tooltip": "Neighbour frames on each side that are aligned and averaged. 0 = off (the mask as it is)."}),
+            "threshold": ("FLOAT", {"default": 0.5, "min": 0.05, "max": 0.95, "step": 0.05, "tooltip": "Where the averaged mask is cut again: lower keeps more of the object, higher less."}),
+        }}
+
+    RETURN_TYPES = ("MASK",)
+    FUNCTION = "steady"
+    CATEGORY = "Element Forge/Post"
+    DESCRIPTION = ("Less flicker in an object mask where the object blurs or the light is poor: every frame is averaged with its "
+                   "neighbours after aligning them with the plate's optical flow, then cut sharp again. 0 = off.")
+
+    def steady(self, mask, plate, radius, threshold=0.5):
+        m = mask if mask.ndim == 3 else mask[None]
+        n = m.shape[0]
+        if radius <= 0 or n < 2:
+            return (mask,)
+        x = m.detach().cpu().float().numpy()[..., None].copy()
+        H, W = x.shape[1:3]
+        pl = to_np(plate)[..., :3]
+        s = EFDeflicker.flow_scale(H, W)
+        size = (max(8, int(round(W * s))), max(8, int(round(H * s))))
+        gray = np.stack([cv2.resize((pl[min(i, len(pl) - 1)] @ LUMA).astype(np.float32), size, interpolation=cv2.INTER_AREA)
+                         for i in range(n)])
+        avg = EFDeflicker().temporal(x, gray, int(radius))[..., 0]
+        return (to_t((avg >= threshold).astype(np.float32)),)
+
+
 class EFFreeVRAM:
 
     @classmethod

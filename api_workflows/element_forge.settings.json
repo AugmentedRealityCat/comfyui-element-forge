@@ -232,6 +232,30 @@
    "157",
    "value"
   ],
+  "Leave out: points (x, y; Alt-click in the app)": [
+   "901",
+   "value"
+  ],
+  "Leave out: words (e.g. hand; handle)": [
+   "902",
+   "value"
+  ],
+  "Mask frame (the frame the mask is set on; 0 = the first)": [
+   "921",
+   "value"
+  ],
+  "Mask: add points (x, y; Ctrl-click in the app)": [
+   "922",
+   "value"
+  ],
+  "Mask: add words (e.g. blade; tip)": [
+   "923",
+   "value"
+  ],
+  "Mask: steady over frames (0 = off)": [
+   "928",
+   "value"
+  ],
   "Emitter x in window": [
    "198",
    "anchor_x"
@@ -588,6 +612,10 @@
    "891",
    "value"
   ],
+  "Object in front: also the parts left out": [
+   "905",
+   "value"
+  ],
   "Base locked to the point (no jitter of the base)": [
    "892",
    "value"
@@ -657,6 +685,12 @@
    163,
    164,
    165,
+   901,
+   902,
+   921,
+   922,
+   923,
+   928,
    223,
    224,
    225,
@@ -712,6 +746,7 @@
    871,
    881,
    891,
+   905,
    892
   ],
   "Stem: clip, depth, object, track": [
@@ -747,6 +782,14 @@
    195,
    196,
    197,
+   903,
+   904,
+   924,
+   925,
+   926,
+   927,
+   929,
+   930,
    198,
    199,
    200,
@@ -973,7 +1016,17 @@
    873,
    874,
    875,
-   876
+   876,
+   906,
+   907,
+   908,
+   909,
+   910,
+   911,
+   912,
+   913,
+   914,
+   915
   ],
   "Dissolve": [
    416,

@@ -91,6 +91,20 @@ const passesOf = (mode, effect, values, variant) => ((mode === "preview" && !VAR
   : VARIANT_PASSES[variant] || ALL_PASSES).filter((p) => values?.Light !== false || (p !== "light" && p !== "normals")));
 const previewScale = (st, effect) => (canPreview(st, effect) && quality() === "preview" ? 0.5 : 1);
 
+export const LEAVE_PTS = "Leave out: points (x, y; Alt-click in the app)", LEAVE_WORDS = "Leave out: words (e.g. hand; handle)",
+  FRONT_ALL = "Object in front: also the parts left out";
+export const MASK_FRAME = "Mask frame (the frame the mask is set on; 0 = the first)", ADD_PTS = "Mask: add points (x, y; Ctrl-click in the app)",
+  ADD_WORDS = "Mask: add words (e.g. blade; tip)";
+export const ptsOf = (e, k) => String(e?.adv?.[k] || "").split(";").map((s) => s.split(",").map((v) => +v.trim()))
+  .filter((p) => p.length === 2 && p.every((v) => Number.isFinite(v))).map(([x, y]) => ({ x, y }));
+export const ptsText = (pts) => pts.map((p) => `${Math.round(p.x)}, ${Math.round(p.y)}`).join("; ");
+export const leavePoints = (e) => ptsOf(e, LEAVE_PTS);
+export const leaveSet = (e) => !!(leavePoints(e).length || String(e?.adv?.[LEAVE_WORDS] || "").trim());
+export const MASK_STEADY = "Mask: steady over frames (0 = off)";
+export const maskFrame = (e) => Math.max(0, Math.round(+e?.adv?.[MASK_FRAME] || 0));
+export const maskPointCount = (e) => ptsOf(e, ADD_PTS).length + ptsOf(e, LEAVE_PTS).length;
+export const maskSet = (e) => !!(maskFrame(e) || maskPointCount(e) || leaveSet(e) || String(e?.adv?.[ADD_WORDS] || "").trim());
+
 export function valuesFor(effect, shot, scale = 1) {
   const st = styleOf(effect);
   const clip = shot.clip;

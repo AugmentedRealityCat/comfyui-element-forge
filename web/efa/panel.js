@@ -5,7 +5,7 @@ import * as P from "./ui/presets.js";
 import { estimate, efaValues, frameBox, ltxFrames, valuesFor, canPreview, outputOf } from "./ui/run.js";
 import { loadRtx, hasRtx, ltxForBuild, loadSystem, systemNotes } from "./ui/machine.js";
 import * as C from "./ui/comfy.js";
-import { editBrush } from "./ui/stage.js";
+import { editBrush, seekTo, frameHere } from "./ui/stage.js";
 import { initLive, poke as pokeLive, refresh as refreshLive, liveMode, setLiveMode, livePreviews } from "./live.js";
 import { emitterPanel, basicFill, emitterKind, ownValues, SHAPES, SHAPE, shapeOf, shapeFixed, setAdv, effStyle, guideNow } from "./emitter.js";
 import { initShotLine, lineState, describe as describeLine, typedByHand } from "./shotline.js";
@@ -306,10 +306,12 @@ function pickerBody(shot) {
 
 const MASK = "Track follows the object mask (hands, bodies)", SCENE = "Sticks to scene (off = object)", OWN = "Own object mask (off = click)",
   ALIKE = "Object word: all alike objects (e.g. all sticks of a crown; off = the clicked one)", STILL = "Fixed on screen (Follows: Screen)";
-const whereKey = (e) => JSON.stringify([S.getShot().clip?.name, e.where, e.adv?.[SCENE], e.adv?.[MASK], e.adv?.[STILL], e.adv?.[OWN] ? e.paint?.mask : null, P.objectWord(e)]);
+const whereKey = (e) => JSON.stringify([S.getShot().clip?.name, e.where, e.adv?.[SCENE], e.adv?.[MASK], e.adv?.[STILL], e.adv?.[OWN] ? e.paint?.mask : null, P.objectWord(e),
+  ...(R.maskSet(e) ? [e.adv?.[R.LEAVE_PTS] || "", e.adv?.[R.LEAVE_WORDS] || "", R.maskFrame(e), e.adv?.[R.ADD_PTS] || "", e.adv?.[R.ADD_WORDS] || ""] : [])]);
 const TRACK_KEYS = ["Clip", "Still image (a picture in the input folder instead of the clip)", "Still image length (s)", "Frames", "Point A x", "Point A y", "Point B x", "Point B y", "Object word (optional, helps the click)", ALIKE, OWN,
   "Own object mask: first frame, paint the object (mask editor)", SCENE, MASK, STILL, "Follows motion", "Inpaint (off = on black)", "On black: more room",
-  "Window A-B automatic", "Window width (plate px)", "Window height (plate px)", "Emitter x in window", "Emitter y in window", "Generate width", "Generate height"];
+  "Window A-B automatic", "Window width (plate px)", "Window height (plate px)", "Emitter x in window", "Emitter y in window", "Generate width", "Generate height",
+  R.LEAVE_PTS, R.LEAVE_WORDS, R.MASK_FRAME, R.ADD_PTS, R.ADD_WORDS, R.MASK_STEADY];
 const CHECK_PHASE = { SAM3_Detect: "Finding the object", EFSaveTrack: "Keeping the track", EFFollowCrop: "Drawing the mask",
   EFMaskTrack: "Drawing the mask", EFTrackPreview: "Drawing the mask", CreateVideo: "Saving the video", SaveVideo: "Saving the video" };
 function checkPhase(e, ck, phase) {
@@ -422,7 +424,10 @@ function savedTracks(e) {
   return group("tracks", `Saved tracks (${list.length})`, () => list.map((tr) => {
     const w = tr.where || {};
     const label = [`A ${w.a?.join(", ")}`, w.b?.length ? `B ${w.b.join(", ")}` : null, w.word ? `“${w.word}”` : null,
-      w.alike ? "all alike" : null, w.own ? "painted" : null].filter(Boolean).join(" · ");
+      w.alike ? "all alike" : null, w.own ? "painted" : null, w.frame ? `mask on frame ${w.frame}` : null,
+      w.add || w.add_words ? `adding ${[w.add ? `${w.add.split(";").length} ${w.add.includes(";") ? "parts" : "part"}` : null,
+        w.add_words ? `“${w.add_words}”` : null].filter(Boolean).join(", ")}` : null, w.leave || w.leave_words ? `leaving out ${[w.leave ? `${w.leave.split(";").length} ${w.leave.includes(";") ? "parts" : "part"}` : null,
+        w.leave_words ? `“${w.leave_words}”` : null].filter(Boolean).join(", ")}` : null].filter(Boolean).join(" · ");
     const here = cur && cur !== "loading" && cur.key === tr.key;
     return h("div", { class: "row between saved-track" + (here ? " on" : "") }, h("span", { class: "small" }, label, here ? h("span", { class: "badge" }, "this place") : null),
       h("div", { class: "row gap" }, here ? null : h("button", { class: "btn ghost small", title: w.own ? "Puts back the points and the word; the painted mask stays as you have it now" : "Puts back the points and the word",
@@ -436,6 +441,13 @@ function useTrack(w) {
     if (!x) return;
     x.where = { ...x.where, a: w.a?.length ? { x: w.a[0], y: w.a[1] } : x.where.a, b: w.b?.length ? { x: w.b[0], y: w.b[1] } : null };
   }, "point");
+  S.change((sh) => {
+    const x = sh.effects.find((y) => y.id === sh.active);
+    if (!x) return;
+    x.adv = { ...x.adv };
+    for (const [k, v] of [[R.LEAVE_PTS, w.leave], [R.LEAVE_WORDS, w.leave_words], [R.MASK_FRAME, w.frame], [R.ADD_PTS, w.add],
+      [R.ADD_WORDS, w.add_words]]) if (v) x.adv[k] = v; else delete x.adv[k];
+  }, "leave");
   typed.delete("object_word");
   api.setFx("object_word", w.word || "");
   api.setFx("all_alike", !!w.alike);
@@ -455,7 +467,7 @@ async function runFirstMask(key) {
   const e = S.activeEffect(), c = S.getShot().clip;
   if (!e || !c || whereKey(e) !== key) return;
   if (firstMask.promptId) C.cancel(firstMask.promptId).catch(() => {});
-  const fm = firstMask = { key, status: "running", promptId: null, ms: null, error: null, t0: performance.now(), urls: {} };
+  const fm = firstMask = { key, status: "running", promptId: null, ms: null, error: null, t0: performance.now(), urls: {}, frame: R.maskFrame(e) };
   render();
   try {
     C.connectSocket();
@@ -467,7 +479,7 @@ async function runFirstMask(key) {
     fm.promptId = await C.queue(prompt, {
       onOutput: (node, out) => {
         const f = out?.images?.find((x) => x.type === "temp");
-        const tag = { first_a: "a", first_b: "b" }[String(node)];
+        const tag = { first_a: "a", first_b: "b", first_left: "left" }[String(node)];
         if (f && tag) fm.urls[tag] = `/view?filename=${encodeURIComponent(f.filename)}&subfolder=${encodeURIComponent(f.subfolder || "")}&type=${encodeURIComponent(f.type || "temp")}`;
       },
       onDone: (r) => {
@@ -475,7 +487,7 @@ async function runFirstMask(key) {
         fm.status = r.status === "done" && fm.urls.a ? "done" : fromQueue(r);
         fm.error = r.error || (r.status === "done" && !fm.urls.a ? "No mask came back." : null);
         fm.ms = Math.round(performance.now() - fm.t0);
-        if (fm.status === "done") S.setUI({ firstMask: { clip: c.name, key, a: fm.urls.a, b: fm.urls.b || null } });
+        if (fm.status === "done") S.setUI({ firstMask: { clip: c.name, key, a: fm.urls.a, b: fm.urls.b || null, left: fm.urls.left || null, frame: fm.frame } });
         render();
       },
     });
@@ -487,8 +499,10 @@ async function runFirstMask(key) {
 }
 function firstMaskNote(e) {
   if (!e.where.a || e.adv?.[OWN] || firstMask.key !== whereKey(e)) return null;
-  if (firstMask.status === "waiting" || firstMask.status === "running") return h("p", { class: "muted small" }, "Finding the object on the first frame…");
-  if (firstMask.status === "done") return h("p", { class: "muted small" }, `Blue on the first frame: what will be tracked (${(firstMask.ms / 1000).toFixed(1)} s). Not right? A word or your own mask under Object.`);
+  const on = firstMask.frame ? `the mask frame (${firstMask.frame})` : "the first frame";
+  if (firstMask.status === "waiting" || firstMask.status === "running") return h("p", { class: "muted small" }, `Finding the object on ${on}…`);
+  if (firstMask.status === "done") return h("p", { class: "muted small" }, `Blue on ${on}: what will be tracked (${(firstMask.ms / 1000).toFixed(1)} s)${
+    firstMask.urls?.left ? ", red: the parts left out" : ""}. Not right? Add or leave out parts under Object.`);
   if (firstMask.status === "failed") return note("err", `The first frame's mask failed: ${firstMask.error || "unknown error"}`);
   return null;
 }
@@ -522,9 +536,62 @@ function lockBaseRow(st) {
       "The AI draws the effect a little differently in every frame, so its base can jitter. On: the base stays fixed on the tracked point, the effect still moves above it"),
     h("p", { class: "muted small" }, "For a flame or ball that jitters at its base. Off: only slow drift is smoothed."));
 }
+const STEADY = [[0, "Off", "The mask as the track made it"], [2, "Light", "Two frames on each side"], [4, "Strong", "Four frames on each side"]];
+function maskFields(e) {
+  const c = S.getShot().clip, fps = c?.fps || 25, mf = R.maskFrame(e), tool = S.ui.maskTool || null;
+  const edit = (fn) => S.change((sh) => {
+    const x = sh.effects.find((y) => y.id === sh.active);
+    if (x) { x.adv = { ...x.adv }; fn(x.adv); }
+  }, "mask");
+  const useHere = () => {
+    const f = frameHere();
+    edit((a) => {
+      if (f !== R.maskFrame(e)) { delete a[R.ADD_PTS]; delete a[R.LEAVE_PTS]; }
+      if (f) a[R.MASK_FRAME] = f; else delete a[R.MASK_FRAME];
+    });
+  };
+  const words = (k, ph, label) => {
+    const el = h("input", { class: "text", type: "text", placeholder: ph, "aria-label": label, spellcheck: "false",
+      onchange: (ev) => { const v = ev.target.value.trim(); edit((a) => { if (v) a[k] = v; else delete a[k]; }); } });
+    el.value = e.adv?.[k] || "";
+    return el;
+  };
+  const clicks = (kind, k, label, key) => {
+    const on = tool === kind, n = R.ptsOf(e, k).length;
+    return h("div", { class: "row gap" },
+      h("button", { class: "btn small" + (on ? " on" : ""), "aria-pressed": String(on), disabled: e.where.a ? null : "",
+        title: e.where.a ? `Then click each part in the canvas (${key}-click works at any time)` : "Click the object first",
+        onclick: () => S.setUI({ maskTool: on ? null : kind, tool: "point" }) }, on ? "Done" : label),
+      n ? link(n === 1 ? "Clear the part" : `Clear all ${n} parts`, () => edit((a) => { delete a[k]; })) : null);
+  };
+  return [
+    h("div", { class: "field mask" },
+      h("div", { class: "label", title: "The frame the mask is set on; the track runs from it to the start and to the end of the clip" }, "Mask frame"),
+      h("p", { class: "small" }, mf ? `${fmtSec(mf / fps)} · frame ${mf}` : "The first frame"),
+      h("div", { class: "row gap" },
+        h("button", { class: "btn small", title: "The frame at the playhead becomes the mask frame (points set on another frame are cleared)",
+          onclick: useHere }, "Use this frame"),
+        mf ? h("button", { class: "btn ghost small", title: "The playhead goes to the mask frame", onclick: () => seekTo(mf / fps) }, "Go there") : null),
+      h("p", { class: "muted small" }, "Where all of the object is in view (a drawn blade): move the playhead there and press Use this frame. Parts below are clicked on this frame.")),
+    h("div", { class: "field mask" },
+      h("div", { class: "label", title: "More of the object: tracked with it" }, "Add (optional)"),
+      words(R.ADD_WORDS, "e.g. blade; tip", "Add: words"),
+      clicks("add", R.ADD_PTS, "Click to add", "Ctrl"),
+      h("p", { class: "muted small" }, "Words, or a click on each part (green ring).")),
+    h("div", { class: "field mask" },
+      h("div", { class: "label", title: "These parts are tracked and taken out of the object's mask: they give off nothing. The depth and the rest of the clip stay as they are" }, "Leave out (optional)"),
+      words(R.LEAVE_WORDS, "e.g. hand; handle", "Leave out: words"),
+      clicks("leave", R.LEAVE_PTS, "Click to leave out", "Alt"),
+      h("p", { class: "muted small" }, "Words, or a click on each part (red ring). The mask frame shows them in red.")),
+    h("div", { class: "field mask" },
+      h("div", { class: "label", title: "Averages each frame's mask with its neighbours, aligned to the motion" }, "Steady mask"),
+      seg("Steady mask", STEADY, +e.adv?.[R.MASK_STEADY] || 0, (v) => edit((a) => { if (v) a[R.MASK_STEADY] = v; else delete a[R.MASK_STEADY]; })),
+      h("p", { class: "muted small" }, "Less flicker where the object blurs or the light is poor. Strong can round off fast, thin parts.")),
+  ];
+}
 function objectGroup() {
-  const f = fx(), word = wordOf();
-  const set = word || f.own_mask || f.all_alike;
+  const f = fx(), word = wordOf(), e = effect(), left = e && R.leaveSet(e), masked = e && R.maskSet(e);
+  const set = word || f.own_mask || f.all_alike || masked;
   return group("object", "Object", () => [
     h("p", { class: "muted small" }, "What is tracked: the mask the AI builds from your click. Only needed when it does not fit."),
     h("div", { class: "field" }, h("div", { class: "label", title: "A word for the click. Clicking a crown, the AI often takes the whole head without it" }, "What is it? (optional)"),
@@ -536,8 +603,11 @@ function objectGroup() {
     f.own_mask ? h("p", { class: "muted small" }, effect()?.paint?.maskHidden
       ? ["Your mask is put away after the track; it still counts. ", link("Edit brush", () => editBrush(true))]
       : "Paint over the object in the first frame of the canvas; the track follows your mask.") : null,
+    ...(e ? maskFields(e) : []),
     toggle("In front of the effect (its mask hides it)", f.object_in_front, (v) => api.setFx("object_in_front", v), "The object's mask cuts the effect out wherever the object is, whatever the depth says: a person in front of a portal"),
-  ], { open: !!(set || f.object_in_front), hint: word ? `“${word}”` : f.own_mask ? "painted" : f.object_in_front ? "in front" : "optional" });
+    f.object_in_front && left ? toggle("The parts left out are in front too", e.adv?.[R.FRONT_ALL] ?? true, (v) => setAdv(R.FRONT_ALL, v ? undefined : false),
+      "On: the whole object hides the effect (the hand on the handle too). Off: only what is left") : null,
+  ], { open: !!(set || f.object_in_front), hint: word ? `“${word}”` : f.own_mask ? "painted" : masked ? "mask set" : f.object_in_front ? "in front" : "optional" });
 }
 function positionBody() {
   const e = effect(), st = style(), shot = S.getShot();

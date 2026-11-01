@@ -13,7 +13,7 @@ const DEBOUNCE = 100;
 const KEEP = 8;
 const LOOK_ONLY = new Set(["colors", "color_var", "glow", "trail", "blob", "blob_choke", "blob_soft", "blob_fill", "blob_life", "plate_color",
   "dof", "focus", "bloom", "halo", "ambient", "relief", "shell", "look", "blend", "guide_style", "sprite", "sprite_gain", "sprite_aspect",
-  "sprite_occlude", "sprite_play", "shutter"]);
+  "sprite_occlude", "sprite_play", "shutter", "depth_guide", "depth_edge"]);
 function simSig(body) {
   const v = { ...body.values };
   for (const k of [PARTICLE_EMITTER, DISSOLVE_EXTRA]) {

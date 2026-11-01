@@ -36,7 +36,7 @@ SETUP_ARGS = ("plate", "preset", "emitter", "amount", "speed", "size", "life", "
               "edge_fade", "camera", "look_plate", "line_attach", "motion_carry", "screen_fixed")
 LOOK = {"colors", "color_var", "glow", "trail", "blob", "blob_choke", "blob_soft", "blob_fill", "blob_life", "plate_color", "dof", "focus",
         "bloom", "halo", "ambient", "relief", "shell", "look", "blend", "guide_style", "sprite", "sprite_gain", "sprite_aspect",
-        "sprite_occlude", "sprite_play", "shutter"}
+        "sprite_occlude", "sprite_play", "shutter", "depth_guide", "depth_edge"}
 LOOK_SENT = ("colors", "color_var", "glow", "sprite", "trail", "blob", "blob_choke", "blob_soft", "blob_fill", "blob_life", "opacity",
              "plate_color", "shutter", "blend", "look")
 PANEL = ("rate", "burst", "burst_at", "max_particles", "life", "life_var", "size", "size_var", "size_start", "size_end", "speed",
@@ -50,7 +50,8 @@ PANEL = ("rate", "burst", "burst_at", "max_particles", "life", "life_var", "size
          "grow_seconds", "fine_rough", "climb_seconds", "climb_pitch", "climb_rough", "climb_head", "climb_short", "fork_depth",
          "climb_zigzag", "crack_speed", "crack_length", "crack_branch", "crack_turn", "crack_step", "crack_seeds", "crack_taper",
          "relief",
-         "blend", "plate_color", "ambient", "guide_style", "children")
+         "blend", "plate_color", "ambient", "guide_style", "children",
+         "depth_guide", "depth_edge")
 DPANEL = ("density", "push", "lift", "spread", "inherit", "motion_carry", "gravity", "drag", "turbulence", "turb_scale", "life",
           "size", "fade_out", "edge_noise", "noise_size", "glow", "glow_width", "glow_color", "tint")
 HOLD_SECONDS = 10.0

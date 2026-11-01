@@ -1,4 +1,3 @@
-"""Keep the selected original surface while fading the effect outside its edge."""
 import cv2
 import numpy as np
 import torch

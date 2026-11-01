@@ -84,7 +84,7 @@ class EFParticleSettings:
                 "depth_spread": absval("Random spread of the particles' depth around the emitter (depth map units).", 0.5),
                 "collide": (["preset", "none", "stick", "bounce", "die", "slide"], {"tooltip": "What a particle does when it meets a surface of the depth map while falling: stick (snow), bounce (sparks), die (rain, with splashes if the preset has children), slide."}),
                 "sprite": (["preset", "soft", "dot", "flake", "puff", "wisp", "streak", "spark", "chunk", "custom"], {"tooltip": "Shape of a particle in the seed (start video). wisp: soft noise puff with holes (smoke, dust). chunk: solid angular fragment that tumbles (debris), also in the volume guide. custom: the sprite connected to EF Particles (own image or library element)."}),
-                "guide_style": (["preset", "lines", "volume", "temperature"], {"tooltip": "lines: paths as thin strokes (like canny edges). volume: soft blobs, brighter when nearer (like a depth map). temperature: soft blobs, bright where the particle is hot (its colour over life; fire)."}),
+                "guide_style": (["preset", "lines", "volume", "temperature", "depth"], {"tooltip": "lines: paths as thin strokes (like canny edges). volume: soft blobs, brighter when nearer (like a depth map). temperature: soft blobs, bright where the particle is hot (its colour over life; fire). depth: the clip's depth of the object with the particles where they are nearer (needs depth and the object mask; extra settings depth_guide object/scene, depth_edge)."}),
                 "trail": ("INT", {"default": -1, "min": -1, "max": 60, "tooltip": "Frames of trail behind each particle. -1 = as in the preset."}),
                 "color": ("STRING", {"default": "", "tooltip": "One colour for all particles as hex (#8a0a0a for blood). Empty = the preset's colours over the life."}),
                 "roughness": absval("Lightning: jaggedness of the bolt.", 1.0),
@@ -209,6 +209,25 @@ def setup(plate, preset, emitter, amount, speed, size, life, direction, spread, 
             "premask": premask, "edge_fade": edge_fade, "cam": cam}
 
 
+def depth_guide(s, depth, mask, win, P):
+    from .particle_depth_ops import inner_edge, make_guides, path_lines
+    if depth is None:
+        raise ValueError("the depth guide needs the clip's depth")
+    scene = P.get("depth_guide", "object") == "scene"
+    if not scene and mask is None:
+        raise ValueError("the depth guide of the object needs the object's mask: click the object in Position")
+    out = make_guides(s, _np(depth)[..., 0], None if scene else _mask3(mask), win, pt)
+    edge = int(round(float(P.get("depth_edge", 0) or 0)))
+    if edge > 0 and not scene:
+        out["merged"] = np.where(out["coverage"] > 0.001, out["particle"], out["scene"] * inner_edge(out["object_mask"], edge))
+    g = out["merged"]
+    if s["paths"] is not None:
+        g = np.maximum(g, path_lines(s["paths"], win, pt, s["n"], P))
+    res = np.zeros(g.shape + (4,), np.float32)
+    res[..., 3] = g
+    return res
+
+
 class EFParticles:
     @classmethod
     def INPUT_TYPES(s):
@@ -297,7 +316,10 @@ class EFParticles:
             P["_tinted"] = bool(settings and ("colors" in settings or "colors" in (settings.get("final") or {})))
         win = pt.Raster(W, H, window)
         plate_r = pt.Raster(W, H)
-        guide = pt.render_frames(P, rec, em, paths, win, P["guide_style"], premask, edge_fade)
+        if P["guide_style"] == "depth":
+            guide = depth_guide(s, depth, mask, win, P)
+        else:
+            guide = pt.render_frames(P, rec, em, paths, win, P["guide_style"], premask, edge_fade)
         seed_w = pt.render_frames(P, rec, em, paths, win, "seed", premask, edge_fade, sprite=spr)
         seed_p = pt.render_frames(P, rec, em, paths, plate_r, "seed", premask, edge_fade, edge_raster=win if window else None,
                                   sprite=spr)
@@ -306,7 +328,7 @@ class EFParticles:
         prev = pt.preview(pl, seed_p, em, window)
         T = lambda a: torch.from_numpy(np.ascontiguousarray(a, np.float32))
         drng = np.random.default_rng(seed + 1)
-        g = guide[..., 3:4] if P["guide_style"] == "lines" else guide[..., :3]
+        g = guide[..., 3:4] if P["guide_style"] in ("lines", "depth") else guide[..., :3]
         g = np.repeat(g, 3, -1) if g.shape[-1] == 1 else g
         out_g = T(np.clip(g, 0, 1))
         del guide, g

@@ -2,7 +2,8 @@ import { h, clamp } from "./lib.js";
 import { icon } from "./icons.js";
 import * as S from "./state.js";
 import { styleDef, styleOf, directionWords, naturalDir } from "./presets.js";
-import { frameBox, genSize, genWindow, usesGuide, inWindow } from "./run.js";
+import { frameBox, genSize, genWindow, usesGuide, inWindow, ltxFrames, ptsOf, ptsText, maskFrame, maskPointCount, LEAVE_PTS, ADD_PTS,
+  MASK_FRAME } from "./run.js";
 import { PostRenderer } from "./post.js";
 import { LiveSim, blendCss } from "./livesim.js";
 import { postSettings, commonSettings, weightAt, placeAt, brightAt, pivotOf, resultBox, setPlace, animated, keyHere, ensurePreview } from "./look.js";
@@ -300,7 +301,7 @@ function onDown(ev) {
     onMove(ev);
     return;
   }
-  drag = { kind: "press", hit, x0: p.x, y0: p.y, start: cp, shift: ev.shiftKey };
+  drag = { kind: "press", hit, x0: p.x, y0: p.y, start: cp, shift: ev.shiftKey, alt: ev.altKey, ctrl: ev.ctrlKey || ev.metaKey };
 }
 function startPan(p, click) {
   drag = { kind: "pan", x0: p.x, y0: p.y, vx: view.x, vy: view.y, click };
@@ -320,6 +321,8 @@ function startDrag(hit, cp) {
 }
 function clickAt(pr) {
   const e = eff(), cp = pr.start;
+  const mk = S.ui.step === "where" && e?.where.a ? (pr.alt ? "leave" : pr.ctrl ? "add" : S.ui.maskTool) : null;
+  if (S.ui.tool === "point" && inClip(cp) && mk) { maskPoint(cp, mk); return; }
   if (S.ui.tool === "point" && inClip(cp)) { setPoint(cp, pr.shift || needsB() ? "b" : "a"); return; }
   if (S.ui.tool === "pick" && e && isLive() && inClip(cp)) {
     const col = pickColour(cp);
@@ -328,6 +331,25 @@ function clickAt(pr) {
   }
   if (S.ui.compare && live?.ready) { live.renderer.setWipe(clamp((pr.x0 - view.x) / (clip().width * view.s), 0, 1)); apply(); return; }
   S.setUI({ selected: pr.hit ? (pr.hit.kind === "rmove" ? "place" : "box") : null });
+}
+export function frameHere() {
+  const c = clip();
+  return c ? clamp(Math.round(playhead() * (c.fps || 25)), 0, ltxFrames(c.frames) - 1) : 0;
+}
+export const atMaskFrame = (e) => frameHere() === maskFrame(e);
+function maskPoint(cp, kind) {
+  const e = eff();
+  if (!e || (maskPointCount(e) && !atMaskFrame(e))) return;
+  const here = frameHere(), k = kind === "add" ? ADD_PTS : LEAVE_PTS;
+  S.change((s) => {
+    const fx = s.effects.find((x) => x.id === s.active);
+    if (!fx) return;
+    const pts = ptsOf(fx, k), near = pts.findIndex((p) => Math.hypot(p.x - cp.x, p.y - cp.y) * view.s < 12);
+    if (near >= 0) pts.splice(near, 1); else pts.push({ x: Math.round(cp.x), y: Math.round(cp.y) });
+    fx.adv = { ...fx.adv };
+    if (pts.length) fx.adv[k] = ptsText(pts); else delete fx.adv[k];
+    if (here) fx.adv[MASK_FRAME] = here; else delete fx.adv[MASK_FRAME];
+  }, "mask");
 }
 function setPoint(cp, which) {
   const pt = { x: Math.round(cp.x), y: Math.round(cp.y) };
@@ -585,6 +607,7 @@ function onWheel(ev) {
 
 function onKey(ev) {
   if (ev.key === " ") { ev.preventDefault(); if (!ev.repeat) { spaceDown = true; spaceAt = performance.now(); root.style.cursor = "grab"; } }
+  if (ev.key === "Escape" && !drag && S.ui.maskTool) { S.setUI({ maskTool: null }); ev.preventDefault(); return; }
   if (ev.key === "Escape" && drag) { const was = drag; drag = null; root.classList.remove("panning"); if (was.kind !== "pan" && was.kind !== "press" && was.kind !== "none") S.cancelGesture(); ev.preventDefault(); return; }
   if (ev.key === "Enter" && drag) { if (drag.kind !== "press") onUp(ev); return; }
   const k = ev.key.toLowerCase();
@@ -675,7 +698,7 @@ export function resetSelected(which = selection()) {
 }
 
 const tintCache = new Map();
-function tinted(url) {
+function tinted(url, rgb = [106, 168, 255]) {
   const have = tintCache.get(url);
   if (have) return have.ready ? have.canvas : null;
   const rec = { ready: false, canvas: document.createElement("canvas") };
@@ -689,7 +712,7 @@ function tinted(url) {
     const px = g.getImageData(0, 0, cv.width, cv.height);
     for (let i = 0; i < px.data.length; i += 4) {
       const a = px.data[i];
-      px.data[i] = 106; px.data[i + 1] = 168; px.data[i + 2] = 255; px.data[i + 3] = a;
+      [px.data[i], px.data[i + 1], px.data[i + 2]] = rgb; px.data[i + 3] = a;
     }
     g.putImageData(px, 0, 0);
     rec.ready = true;
@@ -744,10 +767,10 @@ function draw() {
     }
   }
   const fm = S.ui.firstMask;
-  if (e && fm && fm.clip === c.name && S.ui.step === "where" && !S.ui.media && media().currentTime * (c.fps || 25) < 0.5) {
+  if (e && fm && fm.clip === c.name && S.ui.step === "where" && !S.ui.media && Math.abs(media().currentTime * (c.fps || 25) - (fm.frame || 0)) < 0.5) {
     const p0 = toScreen({ x: 0, y: 0 }), p1 = toScreen({ x: c.width, y: c.height });
-    for (const url of [fm.a, fm.b]) {
-      const m = url && tinted(url);
+    for (const url of [fm.a, fm.b, fm.left]) {
+      const m = url && tinted(url, url === fm.left ? [255, 96, 96] : undefined);
       if (m) { ctx.save(); ctx.globalAlpha = 0.5; ctx.drawImage(m, p0.x, p0.y, p1.x - p0.x, p1.y - p0.y); ctx.restore(); }
     }
   }
@@ -840,6 +863,14 @@ function draw() {
     line(2.5, sel === k ? "#6aa8ff" : "#f5c84b"); ctx.stroke();
     ctx.beginPath(); ctx.arc(q.x, q.y, 2.5, 0, Math.PI * 2); ctx.fillStyle = "#fff"; ctx.fill();
     label(q.x + 12, q.y - 10, k.toUpperCase());
+  }
+  if (e && S.ui.step === "where" && atMaskFrame(e)) for (const [k, col] of [[ADD_PTS, "#5ad17a"], [LEAVE_PTS, "#ff6060"]]) for (const p of ptsOf(e, k)) {
+    const q = toScreen(p);
+    ctx.beginPath(); ctx.arc(q.x, q.y, 8, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fill(); line(2.5, col); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(q.x - 4, q.y); ctx.lineTo(q.x + 4, q.y);
+    if (k === ADD_PTS) { ctx.moveTo(q.x, q.y - 4); ctx.lineTo(q.x, q.y + 4); }
+    line(2, "#fff"); ctx.stroke();
   }
   if (e && motionOn(e)) {
     const { emit, tip, fps } = S.ui.liveMotion.data;
@@ -1180,6 +1211,11 @@ function autoHint() {
     : "Draw the path the effect follows, on the first frame (Alt: erase)");
   if (S.ui.tool === "pick" && isLive()) return setHint("Click a colour in your clip: the effect, its light and glow take it on");
   if (S.ui.step === "where" && e && !e.where.a) return setHint("Click the object or the place for the effect");
+  if (S.ui.step === "where" && S.ui.maskTool && e?.where.a && maskPointCount(e) && !atMaskFrame(e)) {
+    return setHint(`The mask's points are on frame ${maskFrame(e)}: go there (Position → Go there) or clear them to start here`);
+  }
+  if (S.ui.step === "where" && S.ui.maskTool && e?.where.a && S.ui.tool === "point") return setHint(S.ui.maskTool === "add"
+    ? "Click each part to add (green ring); a click on a ring takes it away. Esc: done" : "Click each part to leave out (red ring); a click on a ring takes it away. Esc: done");
   if (needsB()) return setHint("Now click where it should go (point B)");
   if (S.ui.step === "effect" && e && s && s.placement !== "frame" && !e.where.a) return setHint("Click the place for the effect first");
   setHint(hoverText, true);

@@ -174,7 +174,23 @@ const BLENDS = [["add", "Glowing", "Adds light: sparks, fire, magic"], ["over", 
 const LOOK = [key("plate_color", "Clip colour", 0, 1, 0.05, { tip: "Each particle takes the clip's colour where it is born; the colours over life shade it (debris)" }),
   key("ambient", "Lit by the clip", 0, 1, 0.05, { tip: "Solid particles take the light around them in the clip (smoke in a dark wood)" })];
 const GUIDE_DRAW = [["lines", "Lines", "Thin strokes along the paths (sparks, lightning)"], ["volume", "Volume", "Soft blobs, brighter when nearer"],
-  ["temperature", "Heat", "Soft blobs, bright where the particle is hot (fire)"]];
+  ["temperature", "Heat", "Soft blobs, bright where the particle is hot (fire)"],
+  ["depth", "Depth", "The clip's depth of the object, the particles where they are in front of it (needs the object's track)"]];
+const DEPTH_SHOWS = [["object", "The object", "Only the clicked object's depth, the particles over it"],
+  ["scene", "The whole scene", "The depth of the whole picture: the AI may redraw the background as well"]];
+const DEPTH_OBJ = [["full", "Whole", "The object's whole surface"], ["edge", "Inner edge", "Only a thin edge inside the object: the AI follows its outline and builds less of a body"]];
+function depthRows(ctx) {
+  const { P } = ctx;
+  if (P.guide_style !== "depth") return [];
+  const edge = +P.depth_edge || 0, scene = P.depth_guide === "scene";
+  return [choiceRow(ctx, "depth_guide", "Depth shows", DEPTH_SHOWS, "What the AI sees of the clip's depth"),
+    scene ? null : h("div", { class: "em-row choice wide" + (edge > 0 ? " changed" : ""), "data-key": "depth_edge" },
+      h("span", { class: "em-label", title: "The object whole, or only a thin edge inside it" }, "Object as"),
+      ctx.ui.seg("Object as", DEPTH_OBJ, edge > 0 ? "edge" : "full", (v) => setOwn(ctx, "depth_edge", v === "edge" ? 2 : undefined)),
+      edge > 0 ? h("button", { class: "em-reset", title: "Back to the whole object", onclick: () => setOwn(ctx, "depth_edge", undefined) }, "×") : h("span", {})),
+    !scene && edge > 0 ? numRow(ctx, key("depth_edge", "Edge width", 1, 16, 1, { unit: "px", int: true })) : null,
+    P.path && P.path !== "particles" ? h("p", { class: "muted small" }, "The path is drawn over the depth as lines.") : null].filter(Boolean);
+}
 const SPLASH0 = { count: 0, speed: 160, spread: 70, direction: 0, life: 0.25, size: 1.2 };
 const splash = (f, label, min, max, step, o = {}) => key(`splash_${f}`, label, min, max, step, { ...o, k2: "children",
   get: (P) => (P.children?.[f] ?? SPLASH0[f]), put: (P, v) => ({ ...SPLASH0, ...(P.children || {}), [f]: v }) });
@@ -524,6 +540,7 @@ function particleGroups(ctx) {
     box(ctx, "source", "Source", [
       ...guideRows(ctx),
       choiceRow(ctx, "guide_style", "Drawn for the AI as", GUIDE_DRAW, "How the particles are drawn in the guide the AI gets"),
+      ...depthRows(ctx),
       startRow(ctx),
       alsoDrawRow(ctx),
       h("div", { class: "em-row choice" }, h("span", { class: "em-label" }, "Shape"),

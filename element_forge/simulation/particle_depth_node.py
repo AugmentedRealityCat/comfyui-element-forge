@@ -1,13 +1,11 @@
-"""Particle surface guides using the same engine and settings as EF Particles."""
 import copy
 import json
 
-import cv2
 import numpy as np
 import torch
 
 from . import particles_node as engine
-from .particle_depth_ops import make_guides
+from .particle_depth_ops import inner_edge, make_guides, path_lines
 
 
 class EFParticleDepthGuides:
@@ -43,8 +41,6 @@ class EFParticleDepthGuides:
     def run(self, depth, guide_content='selected object', object_shape='full object', edge_width=2, minimum_radius=1.5,
             depth_tolerance=0.01, window=None, **simulation):
         sim = engine.setup(depth=depth, **simulation)
-        if sim['paths'] is not None:
-            raise ValueError('Particle depth supports particle sprites, not bolt, climb or crack paths.')
         mask = simulation.get('mask')
         guide_mask = None if guide_content == 'full scene' or mask is None else engine._mask3(mask)
         out = make_guides(sim, engine._np(depth)[..., 0], guide_mask,
@@ -55,11 +51,11 @@ class EFParticleDepthGuides:
                 raise ValueError('Inner-edge guidance is for the selected object. Choose full object with a full-scene guide.')
             if mask is None:
                 raise ValueError('Inner-edge guidance needs an object mask.')
-            kernel = np.ones((2 * edge_width + 1, 2 * edge_width + 1), np.uint8)
-            band = np.stack([np.clip(m - cv2.erode(m, kernel), 0, 1) for m in out['object_mask']])
-            out['scene'] *= band
-            # Matches the edge-guide experiment: visible particles own their guide pixels.
+            out['scene'] *= inner_edge(out['object_mask'], edge_width)
             out['merged'] = np.where(out['coverage'] > 0.001, out['particle'], out['scene'])
+        if sim['paths'] is not None:
+            lines = path_lines(sim['paths'], engine.pt.Raster(sim['W'], sim['H'], window), engine.pt, sim['n'], sim['P'])
+            out['particle'], out['merged'] = np.maximum(out['particle'], lines), np.maximum(out['merged'], lines)
         rgb = lambda key: torch.from_numpy(np.repeat(out[key][..., None], 3, -1))
         return (rgb('scene'), rgb('particle'), rgb('merged'), torch.from_numpy(out['coverage']),
                 rgb('raw_particle_depth'), torch.from_numpy(out['raw_coverage']),

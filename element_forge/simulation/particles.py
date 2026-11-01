@@ -48,6 +48,7 @@ BASE = dict(
     sprite="soft", shutter=0.0, trail=0,
     colors=[[0.0, [1.0, 1.0, 1.0]], [1.0, [1.0, 1.0, 1.0]]], color_var=0.1,
     glow=1.0, guide_style="lines",
+    depth_guide="object", depth_edge=0.0,
     max_particles=20000, substeps=2,
     roughness=0.22, branches=3, reroll_frames=2, grow_seconds=0.0, width=2.0,
     climb_seconds=0.4,

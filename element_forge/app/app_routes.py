@@ -646,10 +646,21 @@ def build_graph(variant, values, run, ltx=None, edit=None, kept=True):
 
 
 KEPT_DEPTH, KEPT_NORMALS, KEPT_MASK, KEPT_MASK_B = "176", "409", "197", "204"
+KEPT_CLEAN, LEFT_PARTS = "904", "903"
+KEPT_WHOLE, MASK_AT = "926", "925"
+MASK_STEADY = "929"
 KEPT_CLASSES = {KEPT_DEPTH: "EFDeflicker", KEPT_NORMALS: "EFMoGeNormals", KEPT_MASK: "ComfySwitchNode", KEPT_MASK_B: "SAM3_TrackToMask"}
 WHERE = {"a": ("Point A x", "Point A y"), "b": ("Point B x", "Point B y"), "word": "Object word (optional, helps the click)",
          "alike": "Object word: all alike objects (e.g. all sticks of a crown; off = the clicked one)",
-         "own": "Own object mask (off = click)", "own_mask": "Own object mask: first frame, paint the object (mask editor)"}
+         "own": "Own object mask (off = click)", "own_mask": "Own object mask: first frame, paint the object (mask editor)",
+         "leave": "Leave out: points (x, y; Alt-click in the app)", "leave_words": "Leave out: words (e.g. hand; handle)",
+         "frame": "Mask frame (the frame the mask is set on; 0 = the first)", "add": "Mask: add points (x, y; Ctrl-click in the app)",
+         "add_words": "Mask: add words (e.g. blade; tip)"}
+
+
+def mask_at_frame(values):
+    return bool(int(values.get(WHERE["frame"]) or 0) > 0 or str(values.get(WHERE["add"]) or "").strip()
+                or str(values.get(WHERE["add_words"]) or "").strip(" ;\n"))
 
 
 def _value(graph, settings, name):
@@ -664,8 +675,23 @@ def where_of(graph, settings):
     if not clip or any(isinstance(v(n), list) for n in ("Frames", *WHERE["a"], *WHERE["b"])):
         return None
     b = [v(WHERE["b"][0]), v(WHERE["b"][1])]
-    return {"clip": clip, "frames": v("Frames"), "a": [v(WHERE["a"][0]), v(WHERE["a"][1])], "b": b if b[0] is not None and b[0] >= 0 else [],
-            "word": v(WHERE["word"]) or "", "alike": bool(v(WHERE["alike"])), "own": bool(v(WHERE["own"])), "own_mask": v(WHERE["own_mask"]) or ""}
+    w = {"clip": clip, "frames": v("Frames"), "a": [v(WHERE["a"][0]), v(WHERE["a"][1])], "b": b if b[0] is not None and b[0] >= 0 else [],
+         "word": v(WHERE["word"]) or "", "alike": bool(v(WHERE["alike"])), "own": bool(v(WHERE["own"])), "own_mask": v(WHERE["own_mask"]) or ""}
+    if any(WHERE[k] in settings and isinstance(v(WHERE[k]), list) for k in ("leave", "leave_words", "frame", "add", "add_words")):
+        return None
+    for k in ("leave", "leave_words", "add", "add_words"):
+        if WHERE[k] in settings and str(v(WHERE[k]) or "").strip():
+            w[k] = str(v(WHERE[k])).strip()
+    if WHERE["frame"] in settings and int(v(WHERE["frame"]) or 0) > 0:
+        w["frame"] = int(v(WHERE["frame"]))
+    return w
+
+
+def _rewire(graph, old, new):
+    for nd in graph.values():
+        for k, val in (nd.get("inputs") or {}).items():
+            if val == old:
+                nd["inputs"][k] = list(new)
 
 
 def depth_model(graph):
@@ -689,8 +715,17 @@ def use_kept(graph, settings):
     if tr:
         s = json.dumps(w)
         graph[KEPT_MASK] = {"class_type": "EFLoadTrack", "inputs": {"where": s, "which": "a"}, "_meta": {"title": "Kept object mask"}}
+        _rewire(graph, [KEPT_WHOLE, 0], [KEPT_MASK, 0])
         if tr.get("b") and w["b"]:
             graph[KEPT_MASK_B] = {"class_type": "EFLoadTrack", "inputs": {"where": s, "which": "b"}, "_meta": {"title": "Kept object mask B"}}
+        if graph.get(KEPT_CLEAN, {}).get("class_type") == "EFLeaveOutTrack":
+            if tr.get("left") and AN.leave_of(w):
+                graph["kept_left"] = {"class_type": "EFLoadTrack", "inputs": {"where": s, "which": "left"},
+                                      "_meta": {"title": "Kept parts left out"}}
+                graph[KEPT_CLEAN] = {"class_type": "MaskComposite", "inputs": {"destination": [KEPT_MASK, 0], "source": ["kept_left", 0],
+                                     "x": 0, "y": 0, "operation": "subtract"}, "_meta": {"title": "Kept object mask without the parts left out"}}
+            elif not AN.leave_of(w):
+                _rewire(graph, [KEPT_CLEAN, 0], [KEPT_MASK, 0])
     return graph
 
 
@@ -698,8 +733,10 @@ def keep_track(graph, settings):
     w = where_of(graph, settings)
     if not w or graph.get(KEPT_MASK, {}).get("class_type") != "ComfySwitchNode":
         return graph
-    graph["track_keep"] = {"class_type": "EFSaveTrack", "inputs": {"mask": [KEPT_MASK, 0], "where": json.dumps(w),
-                                                                    **({"mask_b": [KEPT_MASK_B, 0]} if w["b"] else {})},
+    left = AN.leave_of(w) and graph.get(KEPT_CLEAN, {}).get("class_type") == "EFLeaveOutTrack"
+    graph["track_keep"] = {"class_type": "EFSaveTrack", "inputs": {"mask": [KEPT_WHOLE if KEPT_WHOLE in graph else KEPT_MASK, 0], "where": json.dumps(w),
+                                                                    **({"mask_b": [KEPT_MASK_B, 0]} if w["b"] else {}),
+                                                                    **({"left_out": [KEPT_CLEAN, 1]} if left else {})},
                            "_meta": {"title": "Keep the track"}}
     return graph
 
@@ -756,7 +793,7 @@ def export_graph(values, export, ltx=None):
         if "normals" in want:
             inp["normals"] = [KEPT_NORMALS, 0]
         if "mask" in want:
-            inp["mask"] = [KEPT_MASK, 0]
+            inp["mask"] = [next(k for k in (MASK_STEADY, KEPT_CLEAN, KEPT_MASK) if k in g), 0]
             if b:
                 inp["mask_b"] = [KEPT_MASK_B, 0]
         g["clip_export"] = {"class_type": "EFFinishStack", "inputs": inp, "_meta": {"title": "Export the clip"}}
@@ -983,15 +1020,36 @@ FIRST_MASK, FIRST_MASK_B = "187", "202"
 
 
 def first_mask_graph(values):
+    left = any(str(values.get(WHERE[k]) or "").strip() for k in ("leave", "leave_words"))
+    at = mask_at_frame(values)
+
     def edit(g):
+        if at and MASK_AT in g:
+            g[MASK_AT]["inputs"]["track_video"] = False
+            g["first_a_clean"] = {"class_type": "MaskComposite", "inputs": {"destination": [MASK_AT, 0], "source": [MASK_AT, 1],
+                                                                            "x": 0, "y": 0, "operation": "subtract"}}
+            for tag, src in (("a", ["first_a_clean", 0]), ("left", [MASK_AT, 1])):
+                g[f"first_{tag}_img"] = {"class_type": "MaskToImage", "inputs": {"mask": src}}
+                g[f"first_{tag}"] = {"class_type": "PreviewImage", "inputs": {"images": [f"first_{tag}_img", 0]},
+                                     "_meta": {"title": f"Mask frame: {'the object' if tag == 'a' else 'parts left out'}"}}
         for nid, tag in ((FIRST_MASK, "a"), (FIRST_MASK_B, "b")):
+            if tag == "a" and at and MASK_AT in g:
+                continue
             if tag == "b" and not (isinstance(g.get("108", {}).get("inputs", {}).get("b_x"), int) and g["108"]["inputs"]["b_x"] >= 0):
                 continue
-            g[f"first_{tag}_img"] = {"class_type": "MaskToImage", "inputs": {"mask": [nid, 0]}}
+            src = [nid, 0]
+            if tag == "a" and left:
+                g["first_a_clean"] = {"class_type": "MaskComposite", "inputs": {"destination": src, "source": [LEFT_PARTS, 0],
+                                                                                "x": 0, "y": 0, "operation": "subtract"}}
+                src = ["first_a_clean", 0]
+                g["first_left_img"] = {"class_type": "MaskToImage", "inputs": {"mask": [LEFT_PARTS, 0]}}
+                g["first_left"] = {"class_type": "PreviewImage", "inputs": {"images": ["first_left_img", 0]},
+                                   "_meta": {"title": "First frame: parts left out"}}
+            g[f"first_{tag}_img"] = {"class_type": "MaskToImage", "inputs": {"mask": src}}
             g[f"first_{tag}"] = {"class_type": "PreviewImage", "inputs": {"images": [f"first_{tag}_img", 0]},
                                  "_meta": {"title": f"First frame mask {tag.upper()}"}}
     g = build_graph("check", values, "first-mask", edit=edit, kept=False)
-    return upstream(g, [k for k in g if k in ("first_a", "first_b")])
+    return upstream(g, [k for k in g if k in ("first_a", "first_b", "first_left")])
 
 
 @routes.post("/element-forge/api/first-mask/build")

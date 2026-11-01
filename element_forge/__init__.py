@@ -3,7 +3,7 @@ from .compositing.preview import EFCompPreview
 from .output.export import EFSaveEXR
 from .compositing.light3d import EFDepthLight
 from .compositing.post import EFAddLayers, EFDither, EFGlow
-from .compositing.temporal import EFClipFrames, EFDeflicker, EFFreeVRAM, EFMoGeNormals, EFStillClip
+from .compositing.temporal import EFClipFrames, EFDeflicker, EFFreeVRAM, EFMaskSteady, EFMoGeNormals, EFStillClip
 from .tracking.analysis import EFLoadAnalysis, EFLoadTrack, EFSaveAnalysis, EFSaveTrack
 from .tracking.follow_crop import EFFollowCrop
 from .generation.inplate import EFInPlateGuides
@@ -18,7 +18,7 @@ from .generation.guides import EFGuide, EFGuideChoice
 from .workflow.timing import EFMarginMask, EFPoints, EFStartAt, EFTrackPreview, EFVideoLatentMask
 from .simulation.particles_node import EFParticles, EFParticleSettings
 from .simulation.particle_depth_node import EFParticleDepthGuides
-from .tracking.mask_controls import EFMaskPoint, EFSelectObjectMask
+from .tracking.mask_controls import EFLeaveOutParts, EFLeaveOutTrack, EFMaskAtFrame, EFMaskMode, EFMaskPoint, EFSelectObjectMask
 from .compositing.object_protection import EFObjectProtection, EFRestoreProtectedObject
 from .simulation.dissolve import EFCleanPlateCrop, EFCleanPlateReference, EFCleanPlateUncrop, EFCompToLayer, EFDissolve, EFDissolveBackground, EFScreen
 
@@ -29,6 +29,10 @@ NODE_CLASS_MAPPINGS = {
     "EFParticleDepthGuides": EFParticleDepthGuides,
     "EFMaskPoint": EFMaskPoint,
     "EFSelectObjectMask": EFSelectObjectMask,
+    "EFLeaveOutParts": EFLeaveOutParts,
+    "EFLeaveOutTrack": EFLeaveOutTrack,
+    "EFMaskAtFrame": EFMaskAtFrame,
+    "EFMaskMode": EFMaskMode,
     "EFObjectProtection": EFObjectProtection,
     "EFRestoreProtectedObject": EFRestoreProtectedObject,
     "EFDissolve": EFDissolve,
@@ -49,6 +53,7 @@ NODE_CLASS_MAPPINGS = {
     "EFDepthLight": EFDepthLight,
     "EFGlow": EFGlow,
     "EFDeflicker": EFDeflicker,
+    "EFMaskSteady": EFMaskSteady,
     "EFFreeVRAM": EFFreeVRAM,
     "EFMoGeNormals": EFMoGeNormals,
     "EFClipFrames": EFClipFrames,
@@ -104,6 +109,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "EFDepthLight": "Element Forge · Depth Light",
     "EFGlow": "Element Forge · Glow",
     "EFDeflicker": "Element Forge · Deflicker",
+    "EFMaskSteady": "Element Forge · Steady Mask",
     "EFFreeVRAM": "Element Forge · Free VRAM",
     "EFMoGeNormals": "Element Forge · MoGe Normals",
     "EFClipFrames": "Element Forge · Clip Frames",
@@ -152,7 +158,8 @@ _TOOLS = {"EFLoadElement": "EF Load Element", "EFSaveElement": "EF Save Element"
           "EFDeflicker": "EF Deflicker", "EFDither": "EF Dither", "EFUnmult": "EF Unmult", "EFMoGeNormals": "EF MoGe Normals"}
 _TOOLS.update({"EFParticleDepthGuides": "EF Particle Depth Guides", "EFMaskPoint": "EF Mask Point",
                "EFSelectObjectMask": "EF Select Object Mask", "EFObjectProtection": "EF Object Protection",
-               "EFRestoreProtectedObject": "EF Restore Protected Object"})
+               "EFRestoreProtectedObject": "EF Restore Protected Object", "EFLeaveOutParts": "EF Leave Out Parts",
+               "EFLeaveOutTrack": "EF Leave Out (track)", "EFMaskAtFrame": "EF Mask At Frame", "EFMaskMode": "EF Mask Mode"})
 for _name, _cls in NODE_CLASS_MAPPINGS.items():
     if _name in _TOOLS:
         _cls.CATEGORY = "Element Forge/Tools"

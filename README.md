@@ -81,7 +81,7 @@ The app guides you through five steps:
 - **What it follows**<br>Click where the effect belongs. It follows that **point**, the whole **object**, the **scene** while the camera moves, or stays fixed on **screen**.
 - **Two points**<br>Shift-click a second point for effects that connect two positions, such as lightning or energy.
 - **Track check**<br>An object word helps find what to follow. The track check shows the path and the object's mask before you generate.
-- **Masks**<br>Hide an effect behind the selected object with its mask, or keep the base of an effect on its tracked point.
+- **Masks**<br>Hide an effect behind the selected object with its mask, or keep the base of an effect on its tracked point. Set the mask on any frame of the clip (a blade drawn only later), add parts and leave parts out with clicks or words; the track runs from that frame both ways.
 
 </details>
 
@@ -247,7 +247,7 @@ The AI can also follow an object's shape (a flame wraps round a fist) or a path 
 
 | Group | Controls |
 |:---|:---|
-| **Source** | Guide for the AI and how the particles are drawn for it (lines, volume, heat), the particles it starts from, also draw them over the AI's element, emitter shape and size, maximum particles alive at once |
+| **Source** | Guide for the AI and how the particles are drawn for it (lines, volume, heat, depth of the object with the particles in front), the particles it starts from, also draw them over the AI's element, emitter shape and size, maximum particles alive at once |
 | **Emission** | Rate, burst, timing, pre-roll |
 | **Motion** | Direction and spread, bunching to the centre, speed and its variation, speed at the end, speed limit, how far the particles follow the emitter and the clip, the AI's Follows motion |
 | **Particle** | Look (glowing, solid or contrast), life, size and colour over life, the clip's colour, lit by the clip, colour variation, sprite, trail, glow, flicker, fades, motion blur, opacity, spin, a second class of small particles |

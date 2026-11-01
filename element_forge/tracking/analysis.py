@@ -235,10 +235,26 @@ def own_mask_hash(name):
         return "missing"
 
 
+def leave_of(where):
+    pts = " ".join(str(where.get("leave") or "").split())
+    words = "; ".join(w.strip().lower() for w in str(where.get("leave_words") or "").replace("\n", ";").split(";") if w.strip())
+    return [pts, words] if pts or words else None
+
+
+def mask_frame_of(where):
+    frame, pts = int(where.get("frame") or 0), " ".join(str(where.get("add") or "").split())
+    words = "; ".join(w.strip().lower() for w in str(where.get("add_words") or "").replace("\n", ";").split(";") if w.strip())
+    return [frame, pts, words] if frame or pts or words else None
+
+
 def track_key(where):
     parts = [os.path.basename(str(where.get("clip", ""))), clip_source(where.get("clip")), int(where.get("frames", 0)),
              [int(v) for v in where.get("a") or []], [int(v) for v in where.get("b") or []], str(where.get("word") or "").strip().lower(),
              bool(where.get("alike")), bool(where.get("own")), own_mask_hash(where.get("own_mask")) if where.get("own") else ""]
+    if leave_of(where):
+        parts.append(leave_of(where))
+    if mask_frame_of(where):
+        parts.append(["at", *mask_frame_of(where)])
     return hashlib.sha1(json.dumps(parts).encode()).hexdigest()[:16]
 
 
@@ -284,7 +300,8 @@ class EFSaveTrack:
                 "mask": ("MASK", {"tooltip": "The object mask of point A through the clip (SAM3)."}),
                 "where": ("STRING", {"default": "{}", "tooltip": "JSON: clip, frames, a, b, word, alike, own, own_mask, follows."}),
             },
-            "optional": {"mask_b": ("MASK", {"tooltip": "The object mask of point B (A to B)."})},
+            "optional": {"mask_b": ("MASK", {"tooltip": "The object mask of point B (A to B)."}),
+                         "left_out": ("MASK", {"tooltip": "The parts left out of the object, through the clip (EF Leave Out (track))."})},
         }
 
     RETURN_TYPES = ()
@@ -293,13 +310,13 @@ class EFSaveTrack:
     CATEGORY = "Element Forge"
     DESCRIPTION = "Keeps the object masks of a track in output/element-forge/clips/<clip>/tracks/ for later runs (EF Load Track)."
 
-    def save(self, mask, where, mask_b=None):
+    def save(self, mask, where, mask_b=None, left_out=None):
         w = json.loads(where or "{}")
         w["source"] = clip_source(w.get("clip"))
         key = track_key(w)
         d = os.path.join(clip_folder(w.get("clip"), make=True), "tracks", key)
         os.makedirs(d, exist_ok=True)
-        for name, m in (("mask_a", mask), ("mask_b", mask_b)):
+        for name, m in (("mask_a", mask), ("mask_b", mask_b), ("mask_left", left_out)):
             if m is None:
                 continue
             q = np.round(np.clip(m.detach().cpu().float().numpy(), 0, 1) * 255).astype(np.uint8)
@@ -307,7 +324,7 @@ class EFSaveTrack:
             np.savez_compressed(part, q=q)
             os.replace(part, os.path.join(d, f"{name}.npz"))
         _write_json(os.path.join(d, "track.json"), {"where": w, "time": time.time(), "frames": int(mask.shape[0]),
-                                                    "b": mask_b is not None})
+                                                    "b": mask_b is not None, "left": left_out is not None})
         return {"ui": {"text": [json.dumps({"track": key})]}}
 
 
@@ -316,7 +333,7 @@ class EFLoadTrack:
     def INPUT_TYPES(s):
         return {"required": {
             "where": ("STRING", {"default": "{}"}),
-            "which": (["a", "b"], {"default": "a"}),
+            "which": (["a", "b", "left"], {"default": "a", "tooltip": "a, b: the object masks; left: the parts left out of A."}),
         }}
 
     RETURN_TYPES = ("MASK",)
