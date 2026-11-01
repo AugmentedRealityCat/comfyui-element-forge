@@ -169,6 +169,19 @@ const DISSOLVE = {
   },
 };
 
+const BLENDS = [["add", "Glowing", "Adds light: sparks, fire, magic"], ["over", "Solid", "Covers what is behind: smoke, dust, debris"],
+  ["contrast", "Contrast", "Lighter and darker than the clip: rain, snow"]];
+const LOOK = [key("plate_color", "Clip colour", 0, 1, 0.05, { tip: "Each particle takes the clip's colour where it is born; the colours over life shade it (debris)" }),
+  key("ambient", "Lit by the clip", 0, 1, 0.05, { tip: "Solid particles take the light around them in the clip (smoke in a dark wood)" })];
+const GUIDE_DRAW = [["lines", "Lines", "Thin strokes along the paths (sparks, lightning)"], ["volume", "Volume", "Soft blobs, brighter when nearer"],
+  ["temperature", "Heat", "Soft blobs, bright where the particle is hot (fire)"]];
+const SPLASH0 = { count: 0, speed: 160, spread: 70, direction: 0, life: 0.25, size: 1.2 };
+const splash = (f, label, min, max, step, o = {}) => key(`splash_${f}`, label, min, max, step, { ...o, k2: "children",
+  get: (P) => (P.children?.[f] ?? SPLASH0[f]), put: (P, v) => ({ ...SPLASH0, ...(P.children || {}), [f]: v }) });
+const SPLASH = [splash("count", "Splash: particles", 0, 12, 1, { int: true, tip: "New particles where one hits the scene (Collision); 0 = none" }),
+  splash("speed", "Splash: speed", 0, 1500, 5, { unit: "px/s" }), splash("spread", "Splash: spread", 0, 180, 1, { unit: "°" }),
+  splash("life", "Splash: life", 0.05, 3, 0.05, { unit: "s" }), splash("size", "Splash: size", 0.2, 20, 0.1, { unit: "px" })];
+
 const MODES = [["angle", "Angle", "The direction of the arrow"], ["outward", "Outward", "Away from the object's outline"],
   ["against motion", "Against motion", "Sprayed backwards from the emitter's motion (grinding)"], ["random", "Random", "Every direction"]];
 const COLLIDE = [["none", "None"], ["bounce", "Bounce"], ["stick", "Stick"], ["slide", "Slide"], ["die", "Die"]];
@@ -499,16 +512,18 @@ function particleGroups(ctx) {
       shapeName(shapeOf(e, st)), seedText(ctx)],
     emission: [P.rate > 0 ? `${num_(P.rate * amt, 0)} /s` : null, P.burst > 0 ? `${num_(P.burst * amt, 0)} at once` : null, timeSpan(ctx)],
     motion: [pname(MODES, P.direction_mode), `spread ${num_(P.spread, 0)}°`, `speed ${num_(P.speed, 0)} px/s`],
-    particle: [`life ${num_(P.life)} s`, `size ${num_(P.size)} px`, P.trail > 0 ? `trail ${num_(P.trail, 0)}` : null],
+    particle: [P.blend ? pname(BLENDS, P.blend).toLowerCase() : null, `life ${num_(P.life)} s`, `size ${num_(P.size)} px`, P.trail > 0 ? `trail ${num_(P.trail, 0)}` : null],
     merge: [P.blob > 0 ? `blur ${num_(P.blob, 1)} px · choke ${num_(P.blob_choke)}` : "off"],
     forces: nonzero([["gravity", P.gravity], ["wind", P.wind?.[0]], ["turbulence", P.turbulence], ["drag", P.drag]]),
-    contact: [P.collide === "none" ? "no collision" : pname(COLLIDE, P.collide), (e.adv?.[PREMASK] ?? true) ? null : "in front of all",
+    contact: [P.collide === "none" ? "no collision" : pname(COLLIDE, P.collide), P.children?.count > 0 ? "splash" : null,
+      (e.adv?.[PREMASK] ?? true) ? null : "in front of all",
       Math.abs(P.depth_offset || 0) > 1e-6 ? `depth ${num_(P.depth_offset)}` : null],
   };
   const line = (k) => (sum[k].filter(Boolean).join(" · ") || "none");
   return [
     box(ctx, "source", "Source", [
       ...guideRows(ctx),
+      choiceRow(ctx, "guide_style", "Drawn for the AI as", GUIDE_DRAW, "How the particles are drawn in the guide the AI gets"),
       startRow(ctx),
       alsoDrawRow(ctx),
       h("div", { class: "em-row choice" }, h("span", { class: "em-label" }, "Shape"),
@@ -526,7 +541,8 @@ function particleGroups(ctx) {
       numRow(ctx, key("motion_carry", "Carried by the clip", 0, 1, 0.05)), h("p", { class: "muted small" }, EXPL.carry),
       ...aiFollowRows(ctx),
     ].filter(Boolean), rows(ctx, G.motion.more), "", line("motion")),
-    box(ctx, "particle", "Particle", [...rows(ctx, G.particle.main), colorsRow(ctx)], [spriteRow(ctx), ...rows(ctx, G.particle.more)], "", line("particle")),
+    box(ctx, "particle", "Particle", [choiceRow(ctx, "blend", "Look", BLENDS, "Glowing adds light, solid covers what is behind"),
+      ...rows(ctx, G.particle.main), colorsRow(ctx)], [spriteRow(ctx), ...rows(ctx, LOOK), ...rows(ctx, G.particle.more)], "", line("particle")),
     box(ctx, "merge", "Merge (liquid)", [
       ui.toggle("Merge into one body", P.blob > 0, (v) => setOwn(ctx, "blob", v ? (B.blob > 0 ? B.blob : 8) : 0),
         "The particles blurred together and choked: drops, thick smoke, flame tongues"),
@@ -536,7 +552,7 @@ function particleGroups(ctx) {
     box(ctx, "contact", "Contact & depth", [choiceRow(ctx, "collide", "Collision", COLLIDE, "What a particle does where it meets the scene (depth)"),
       ...rows(ctx, G.contact.main), depthWrapOf(ctx)],
     [...rows(ctx, G.contact.more), ui.toggle("Hidden by the scene", e.adv?.[PREMASK] ?? true, (v) => setAdv(PREMASK, v ? undefined : false),
-      "Off: the particles stay in front of everything")], "", line("contact")),
+      "Off: the particles stay in front of everything"), ...rows(ctx, SPLASH)], "", line("contact")),
   ];
 }
 const depthBase = new Map();

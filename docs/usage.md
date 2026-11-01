@@ -180,6 +180,7 @@ Particle styles also ask where the particles start. Some need a click, others th
 **Guide strength** <sub>Advanced</sub> sets how closely the AI follows. Each style brings the guide it was tested with; every style can take any guide.
 
 - **The same emitter for every style** <sub>Advanced</sub><br>The emitter shows the same groups and controls whatever the style: a preset only sets their values. An AI element shows the particles it would start from; they come in when they guide the AI, are drawn over its element (**Also draw the particles**) or make it (**Made by: Particles only**). **Let them guide the AI** switches the guide in one click.
+- **AI element** <sub>Advanced</sub><br>**Solid element** cuts the element out with its own matte (liquid, dust, stones) instead of its brightness. **Particles start the AI's video** lets the AI start from the particles' picture as well as be guided by it. Both for every style.
 - **Paths** <sub>Advanced</sub><br>Any style can draw a path over its particles: a **Bolt** from A to B (without B it strikes down), a charge that **Climbs** the thin parts of the tracked object, or **Cracks** spreading from A. Each path's own values are under **More path settings**.
 
 ### Live preview

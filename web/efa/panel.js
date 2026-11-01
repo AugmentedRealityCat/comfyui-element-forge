@@ -849,6 +849,13 @@ function effectBody() {
     kids.push(h("div", { class: "field" }, h("div", { class: "label" }, "AI seed"),
       h("div", { class: "row gap" }, fxText("seed", "0", { label: "AI seed", num: true }),
         toggle("Keep it", keep, (v) => api.setFx("control_after_generate", v ? "fixed" : "randomize"), "Off: a new seed for every run"))));
+    const sw = (k, label, tip) => {
+      const own = st.settings?.[k] === true, cur = e.adv?.[k] ?? own;
+      return toggle(label, cur, (v) => setAdv(k, v === own ? undefined : v), `${tip}${own ? " · on in this style" : ""}`);
+    };
+    kids.push(h("div", { class: "field stack" }, h("div", { class: "label" }, "AI element"),
+      sw(SOLID, "Solid element", "Cut out with its own matte instead of its brightness: liquid, dust, stones (Alpha Gen)"),
+      sw(START_VIDEO, "Particles start the AI's video", "The AI starts from the particles' picture as well as being guided by it")));
   }
   const run = effStyle(st, e);
   if (livePreviews(run) && S.getShot().clip) kids.push(...liveBlock(e, adv, run));
@@ -922,6 +929,7 @@ function emitterCtx(e, st) {
     ui: { seg, toggle, group, note, link, open: setOpen },
     extras: { seed: () => particleSeed(e), preroll: () => (kind !== "dissolve" ? prerollRows(hd) : []) } };
 }
+const SOLID = "Solid element (Alpha Gen cut-out)", START_VIDEO = "Particles: start video (seed)";
 function particleSeed(e) {
   const locked = !!e.seedLocked;
   const lock = (v) => S.change((sh) => { const x = sh.effects.find((y) => y.id === e.id); x.seedLocked = v; }, "seed-lock");

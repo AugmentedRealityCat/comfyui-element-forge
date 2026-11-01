@@ -49,7 +49,8 @@ PANEL = ("rate", "burst", "burst_at", "max_particles", "life", "life_var", "size
          "flock_cohesion", "turb_fade", "turb_drag", "land_fade",
          "grow_seconds", "fine_rough", "climb_seconds", "climb_pitch", "climb_rough", "climb_head", "climb_short", "fork_depth",
          "climb_zigzag", "crack_speed", "crack_length", "crack_branch", "crack_turn", "crack_step", "crack_seeds", "crack_taper",
-         "relief")
+         "relief",
+         "blend", "plate_color", "ambient", "guide_style", "children")
 DPANEL = ("density", "push", "lift", "spread", "inherit", "motion_carry", "gravity", "drag", "turbulence", "turb_scale", "life",
           "size", "fade_out", "edge_noise", "noise_size", "glow", "glow_width", "glow_color", "tint")
 HOLD_SECONDS = 10.0
