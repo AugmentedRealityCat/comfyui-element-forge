@@ -1,0 +1,968 @@
+{
+  "id": "799c9dc5-cd7c-4e7c-a826-cbb40c6f5040",
+  "revision": 0,
+  "last_node_id": 18,
+  "last_link_id": 17,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadVideo",
+      "title": "1. Upload original clip",
+      "pos": [
+        30,
+        230
+      ],
+      "size": [
+        310,
+        200
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VIDEO",
+          "type": "VIDEO",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadVideo"
+      },
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 2,
+      "type": "GetVideoComponents",
+      "title": "Original frames and fps",
+      "pos": [
+        370,
+        230
+      ],
+      "size": [
+        330,
+        200
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "video",
+          "type": "VIDEO",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [],
+          "slot_index": 1
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "links": [
+            11
+          ],
+          "slot_index": 2
+        },
+        {
+          "name": "bit_depth",
+          "type": "COMBO",
+          "links": [],
+          "slot_index": 3
+        },
+        {
+          "name": "color_space",
+          "type": "COMBO",
+          "links": [],
+          "slot_index": 4
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GetVideoComponents"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 3,
+      "type": "ImageFromBatch",
+      "title": "First 49 frames for a short test",
+      "pos": [
+        730,
+        230
+      ],
+      "size": [
+        330,
+        200
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            5,
+            10
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageFromBatch"
+      },
+      "widgets_values": [
+        0,
+        49
+      ]
+    },
+    {
+      "id": 4,
+      "type": "LoadVideo",
+      "title": "2. Upload matching full-scene depth",
+      "pos": [
+        30,
+        540
+      ],
+      "size": [
+        310,
+        200
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VIDEO",
+          "type": "VIDEO",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadVideo"
+      },
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 5,
+      "type": "GetVideoComponents",
+      "title": "Depth frames: larger = nearer",
+      "pos": [
+        370,
+        540
+      ],
+      "size": [
+        330,
+        200
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "video",
+          "type": "VIDEO",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            4
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [],
+          "slot_index": 1
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "links": [],
+          "slot_index": 2
+        },
+        {
+          "name": "bit_depth",
+          "type": "COMBO",
+          "links": [],
+          "slot_index": 3
+        },
+        {
+          "name": "color_space",
+          "type": "COMBO",
+          "links": [],
+          "slot_index": 4
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GetVideoComponents"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 6,
+      "type": "ImageFromBatch",
+      "title": "Same source frames",
+      "pos": [
+        730,
+        540
+      ],
+      "size": [
+        330,
+        200
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            12
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageFromBatch"
+      },
+      "widgets_values": [
+        0,
+        49
+      ]
+    },
+    {
+      "id": 7,
+      "type": "CheckpointLoaderSimple",
+      "title": "3. Choose installed SAM3 checkpoint",
+      "pos": [
+        30,
+        850
+      ],
+      "size": [
+        420,
+        200
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            6
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            7
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple"
+      },
+      "widgets_values": [
+        "sam3.1_multiplex_fp16.safetensors"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "EFMaskPoint",
+      "title": "4. Set a point on the emission source",
+      "pos": [
+        490,
+        850
+      ],
+      "size": [
+        330,
+        260
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "EF_MASK_POINTS",
+          "type": "EF_MASK_POINTS",
+          "links": [
+            8
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EFMaskPoint"
+      },
+      "widgets_values": [
+        0.5,
+        0.5,
+        "include",
+        "normalized"
+      ]
+    },
+    {
+      "id": 9,
+      "type": "EFSelectObjectMask",
+      "title": "5. Select / exclude; choose visible reference frame",
+      "pos": [
+        1130,
+        230
+      ],
+      "size": [
+        420,
+        500
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 5
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 6
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 7
+        },
+        {
+          "name": "points",
+          "type": "EF_MASK_POINTS",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "selection",
+          "type": "MASK",
+          "links": [
+            13,
+            17
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "excluded",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        },
+        {
+          "name": "preview",
+          "type": "IMAGE",
+          "links": [
+            9
+          ],
+          "slot_index": 2
+        },
+        {
+          "name": "report",
+          "type": "STRING",
+          "links": [],
+          "slot_index": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EFSelectObjectMask"
+      },
+      "widgets_values": [
+        0,
+        "",
+        "",
+        0.4,
+        1,
+        true
+      ]
+    },
+    {
+      "id": 10,
+      "type": "PreviewImage",
+      "title": "Review selection before LTX",
+      "pos": [
+        1600,
+        230
+      ],
+      "size": [
+        420,
+        430
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 11,
+      "type": "EFParticleDepthGuides",
+      "title": "6. Emitter mask + independent full depth",
+      "pos": [
+        1130,
+        800
+      ],
+      "size": [
+        440,
+        920
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "plate",
+          "type": "IMAGE",
+          "link": 10
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "link": 11,
+          "widget": {
+            "name": "fps"
+          }
+        },
+        {
+          "name": "depth",
+          "type": "IMAGE",
+          "link": 12
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 13
+        }
+      ],
+      "outputs": [
+        {
+          "name": "object_guide",
+          "type": "IMAGE",
+          "links": [
+            15
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "particle_guide",
+          "type": "IMAGE",
+          "links": [
+            16
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "merged_guide",
+          "type": "IMAGE",
+          "links": [
+            14
+          ],
+          "slot_index": 2
+        },
+        {
+          "name": "visible_coverage",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 3
+        },
+        {
+          "name": "raw_particle_depth",
+          "type": "IMAGE",
+          "links": [],
+          "slot_index": 4
+        },
+        {
+          "name": "raw_coverage",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 5
+        },
+        {
+          "name": "report",
+          "type": "STRING",
+          "links": [],
+          "slot_index": 6
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EFParticleDepthGuides"
+      },
+      "widgets_values": [
+        "magic dust",
+        "object contour",
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        -1.0,
+        -1.0,
+        -1.0,
+        0.0,
+        25.0,
+        1,
+        "fixed",
+        "selected object",
+        "inner edge",
+        2,
+        1.5,
+        0.01,
+        "track",
+        0.0,
+        "0.4, 0.4, 0.6, 0.6",
+        0.0,
+        true,
+        0.08,
+        "fixed",
+        false
+      ]
+    },
+    {
+      "id": 12,
+      "type": "PreviewImage",
+      "title": "Merged guide for one LTX reference",
+      "pos": [
+        2070,
+        230
+      ],
+      "size": [
+        420,
+        430
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 14
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 13,
+      "type": "PreviewImage",
+      "title": "Object / scene guide for separate references",
+      "pos": [
+        2070,
+        740
+      ],
+      "size": [
+        420,
+        430
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 15
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 14,
+      "type": "PreviewImage",
+      "title": "Particle guide for separate references",
+      "pos": [
+        2070,
+        1250
+      ],
+      "size": [
+        420,
+        430
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 16
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 15,
+      "type": "EFObjectProtection",
+      "title": "Optional independent protection for compositing",
+      "pos": [
+        1600,
+        800
+      ],
+      "size": [
+        420,
+        300
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "object_mask",
+          "type": "MASK",
+          "link": 17
+        }
+      ],
+      "outputs": [
+        {
+          "name": "effect_visibility",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 0
+        },
+        {
+          "name": "protected",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EFObjectProtection"
+      },
+      "widgets_values": [
+        1,
+        2.0,
+        0.5
+      ]
+    },
+    {
+      "id": 16,
+      "type": "Note",
+      "pos": [
+        30,
+        20
+      ],
+      "size": [
+        1050,
+        170
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "EXPERIMENTAL TOOLS\n\nUpload an original clip and matching full-scene inverse depth. Set the point and reference frame before running. Chain more EF Mask Point nodes to include/exclude objects, or disconnect positive points to use include words. Red = excluded, green = emission source. Nothing downloads automatically."
+      ],
+      "color": "#454024",
+      "bgcolor": "#292719"
+    },
+    {
+      "id": 17,
+      "type": "Note",
+      "pos": [
+        1130,
+        20
+      ],
+      "size": [
+        1360,
+        170
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "EMISSION IS NOT SCENE VISIBILITY\n\nThe selection mask limits particle births. Keep the full depth map connected for scene interaction. guide_content only changes what LTX sees. To use full scene, choose full object instead of inner edge. Inspect word exclusions: SAM may select an unintended object. See docs/particle-depth.md."
+      ],
+      "color": "#454024",
+      "bgcolor": "#292719"
+    },
+    {
+      "id": 18,
+      "type": "Note",
+      "pos": [
+        30,
+        1260
+      ],
+      "size": [
+        1000,
+        230
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "CONNECT TO YOUR LTX / COMPOSITING WORKFLOW\n\nMerged guide goes to one IC-LoRA reference. Object and particle outputs can feed two references. This example does not generate video. Optional effect_visibility goes to EF Place Layer holdout; protected goes to EF Restore Protected Object after glow when exact original pixels are required. Protect a broader object than the emission source if needed."
+      ],
+      "color": "#454024",
+      "bgcolor": "#292719"
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "VIDEO"
+    ],
+    [
+      2,
+      2,
+      0,
+      3,
+      0,
+      "IMAGE"
+    ],
+    [
+      3,
+      4,
+      0,
+      5,
+      0,
+      "VIDEO"
+    ],
+    [
+      4,
+      5,
+      0,
+      6,
+      0,
+      "IMAGE"
+    ],
+    [
+      5,
+      3,
+      0,
+      9,
+      0,
+      "IMAGE"
+    ],
+    [
+      6,
+      7,
+      0,
+      9,
+      1,
+      "MODEL"
+    ],
+    [
+      7,
+      7,
+      1,
+      9,
+      2,
+      "CLIP"
+    ],
+    [
+      8,
+      8,
+      0,
+      9,
+      3,
+      "EF_MASK_POINTS"
+    ],
+    [
+      9,
+      9,
+      2,
+      10,
+      0,
+      "IMAGE"
+    ],
+    [
+      10,
+      3,
+      0,
+      11,
+      0,
+      "IMAGE"
+    ],
+    [
+      11,
+      2,
+      2,
+      11,
+      1,
+      "FLOAT"
+    ],
+    [
+      12,
+      6,
+      0,
+      11,
+      2,
+      "IMAGE"
+    ],
+    [
+      13,
+      9,
+      0,
+      11,
+      3,
+      "MASK"
+    ],
+    [
+      14,
+      11,
+      2,
+      12,
+      0,
+      "IMAGE"
+    ],
+    [
+      15,
+      11,
+      0,
+      13,
+      0,
+      "IMAGE"
+    ],
+    [
+      16,
+      11,
+      1,
+      14,
+      0,
+      "IMAGE"
+    ],
+    [
+      17,
+      9,
+      0,
+      15,
+      0,
+      "MASK"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.38,
+      "offset": [
+        20,
+        20
+      ]
+    }
+  },
+  "version": 0.4
+}

@@ -17,12 +17,20 @@ from .generation.elements import EFLoadElement, EFSaveElement
 from .generation.guides import EFGuide, EFGuideChoice
 from .workflow.timing import EFMarginMask, EFPoints, EFStartAt, EFTrackPreview, EFVideoLatentMask
 from .simulation.particles_node import EFParticles, EFParticleSettings
+from .simulation.particle_depth_node import EFParticleDepthGuides
+from .tracking.mask_controls import EFMaskPoint, EFSelectObjectMask
+from .compositing.object_protection import EFObjectProtection, EFRestoreProtectedObject
 from .simulation.dissolve import EFCleanPlateCrop, EFCleanPlateReference, EFCleanPlateUncrop, EFCompToLayer, EFDissolve, EFDissolveBackground, EFScreen
 
 NODE_CLASS_MAPPINGS = {
     "EFUnmult": EFUnmult,
     "EFParticles": EFParticles,
     "EFParticleSettings": EFParticleSettings,
+    "EFParticleDepthGuides": EFParticleDepthGuides,
+    "EFMaskPoint": EFMaskPoint,
+    "EFSelectObjectMask": EFSelectObjectMask,
+    "EFObjectProtection": EFObjectProtection,
+    "EFRestoreProtectedObject": EFRestoreProtectedObject,
     "EFDissolve": EFDissolve,
     "EFCleanPlateReference": EFCleanPlateReference,
     "EFCleanPlateCrop": EFCleanPlateCrop,
@@ -142,6 +150,9 @@ except Exception:
 
 _TOOLS = {"EFLoadElement": "EF Load Element", "EFSaveElement": "EF Save Element", "EFGlow": "EF Glow", "EFDepthLight": "EF Depth Light",
           "EFDeflicker": "EF Deflicker", "EFDither": "EF Dither", "EFUnmult": "EF Unmult", "EFMoGeNormals": "EF MoGe Normals"}
+_TOOLS.update({"EFParticleDepthGuides": "EF Particle Depth Guides", "EFMaskPoint": "EF Mask Point",
+               "EFSelectObjectMask": "EF Select Object Mask", "EFObjectProtection": "EF Object Protection",
+               "EFRestoreProtectedObject": "EF Restore Protected Object"})
 for _name, _cls in NODE_CLASS_MAPPINGS.items():
     if _name in _TOOLS:
         _cls.CATEGORY = "Element Forge/Tools"
