@@ -261,7 +261,7 @@ def apply_effect(values, effect):
         out[OBJECT_IN_FRONT] = True
     out[UPSCALE] = bool(effect.get("sharper_2x"))
     if effect.get("mode") == "advanced":
-        out[FOLLOWS] = bool(effect.get("follows_motion")) and str(effect.get("effect_style", "")) not in PARTICLE_STYLES
+        out[FOLLOWS] = bool(effect.get("follows_motion"))
         own = str(effect.get("emitter_values") or "").strip()
         if own and own != "{}":
             json.loads(own)
@@ -277,9 +277,9 @@ def apply_effect(values, effect):
         keep = float(effect.get("keep_original") or 0.0)
         if keep > 0:
             out[INPAINT_SIGMAS] = keep_sigmas(keep)
-        if guide != "style default" and style not in PARTICLE_STYLES:
+        if guide != "style default":
             out[AI_GUIDE] = guide
-            if guide == "particles":
+            if guide == "particles" and style not in PARTICLE_STYLES:
                 pp = str(effect.get("guide_particles") or "style default")
                 out["Particles"] = True
                 out["Particle preset"] = GUIDE_PARTICLES.get(style, "magic dust") if pp == "style default" else pp

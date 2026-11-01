@@ -562,7 +562,7 @@ async def compute(body, check):
     kw = {k: (v[0] if isinstance(v, list) and v else None) for k, v in data.items()}
     inputs = dict(graph[PARTICLES]["inputs"])
     fallbacks = []
-    for k, (src, idx) in FALLBACK.items():
+    for k, (src, idx) in ({} if body.get("params_only") else FALLBACK).items():
         if kw.get(k) is None and is_link(inputs.get(k)) and src in graph:
             try:
                 kw[k] = (await RUNNER.run(graph, src, ctx)).outputs[idx][0]
@@ -595,6 +595,8 @@ async def compute(body, check):
               "amount": float(args["amount"] if args["amount"] is not None else 1.0), "emitter": args["emitter"],
               "params": {k: P[k] for k in PANEL if k in P}, "base": {k: base[k] for k in PANEL if k in base},
               "fallbacks": fallbacks, "left_out": sorted(set(ctx["left_out"])), "cached": key in SIM_CACHE}
+    if body.get("params_only"):
+        return header, None
     if body.get("have") == key and key in SIM_CACHE:
         header.update(n=SIM_CACHE[key]["n"], preroll_s=round(preroll_seconds(SIM_CACHE[key]["P"], SIM_CACHE[key]["em"]), 3), ms={"inputs": round(t_inputs * 1000), "total": round((time.time() - t0) * 1000)})
         return header, None
@@ -688,6 +690,10 @@ def _job(seq, body):
         RUNNER.trim()
 
 
+def _values_job(body):
+    return pack(*asyncio.run(compute({**body, "params_only": True}, lambda: None)))
+
+
 LOOPBACK = ("127.0.0.1", "::1", "::ffff:127.0.0.1", "localhost")
 
 
@@ -717,4 +723,16 @@ async def ef_live(request):
     resp.headers["Cache-Control"] = "no-store"
     if not _local(request):
         resp.enable_compression()
+    return resp
+
+
+@routes.post("/element-forge/api/live-values")
+async def ef_live_values(request):
+    body = await request.json()
+    try:
+        data = await asyncio.get_running_loop().run_in_executor(WORKER, _values_job, body)
+    except (ValueError, KeyError, Missing) as e:
+        return web.json_response({"error": str(e)}, status=400)
+    resp = web.Response(body=data, content_type="application/octet-stream")
+    resp.headers["Cache-Control"] = "no-store"
     return resp

@@ -3,7 +3,7 @@ import * as P from "./ui/presets.js";
 import { efaValues } from "./ui/run.js";
 import { playhead } from "./ui/stage.js";
 import { decodeLive } from "./ui/livesim.js";
-import { effStyle, guideStyle, guideNow } from "./emitter.js";
+import { effStyle, guideStyle, guideNow, emitterKind } from "./emitter.js";
 
 export const PARTICLE_SEED = "Particle seed";
 export const PREROLL = "Particle pre-roll (s, -2 = as in the preset, -1 = auto)";
@@ -60,6 +60,7 @@ function target() {
 
 async function request() {
   const t = target();
+  if (!t || t.kind === "motion") requestValues();
   if (!t) {
     if (S.ui.liveSim || S.ui.liveMotion) S.setUI({ liveSim: null, liveMotion: null });
     lastSig = null;
@@ -114,6 +115,47 @@ async function request() {
   } finally {
     busy = null;
     if (queued) { queued = false; poke(true); }
+  }
+}
+
+let lastValSig = null, valBusy = false, valQueued = false;
+async function requestValues() {
+  const shot = S.getShot(), e = S.activeEffect(), c = shot.clip;
+  const st0 = e ? P.styleDef(e.kind, e.style) : null;
+  if (!e || !c || !st0 || emitterKind(st0) === "dissolve") return;
+  const { values, pending } = efaValues(shot);
+  if (pending) Object.assign(values, await pending);
+  const f = fxOf() || {};
+  values.Particles = true;
+  values["Particle preset"] = f.guide_particles && f.guide_particles !== "style default" ? f.guide_particles : P.startPreset(st0);
+  values[PARTICLE_SEED] = Number.isFinite(+f.particle_seed) ? +f.particle_seed : 42;
+  values[PREROLL] = Number.isFinite(+f.preroll) ? +f.preroll : -2;
+  if (f.mode === "advanced" && f.emitter_values) values[PARTICLE_EMITTER] = f.emitter_values;
+  const body = { values, variant: st0.variant || "app", mode: "play", frame: 0 };
+  const sig = JSON.stringify(body);
+  const lv = S.ui.liveValues;
+  if (sig === lastValSig && lv?.effect === e.id && lv?.clip === c.name) return;
+  if (valBusy) { valQueued = true; return; }
+  lastValSig = sig;
+  valBusy = true;
+  if (lv?.effect === e.id && lv?.clip === c.name) S.setUI({ liveValues: { ...lv, status: "running" } });
+  try {
+    const r = await fetch("/element-forge/api/live-values", { method: "POST", headers: { "Content-Type": "application/json" }, body: sig });
+    if (!r.ok) {
+      let msg = `${r.status}`;
+      try { msg = (await r.json()).error || msg; } catch {  }
+      throw new Error(msg);
+    }
+    const d = decodeLive(await r.arrayBuffer());
+    const cur = S.activeEffect();
+    if (!cur || cur.id !== e.id || S.getShot().clip?.name !== c.name) return;
+    S.setUI({ liveValues: { clip: c.name, effect: e.id, header: d.header, status: "ready", error: null } });
+  } catch (err) {
+    lastValSig = null;
+    S.setUI({ liveValues: { clip: c.name, effect: e.id, header: S.ui.liveValues?.header || null, status: "failed", error: err.message } });
+  } finally {
+    valBusy = false;
+    if (valQueued) { valQueued = false; poke(true); }
   }
 }
 

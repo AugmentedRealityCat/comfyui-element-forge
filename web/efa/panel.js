@@ -7,7 +7,7 @@ import { loadRtx, hasRtx, ltxForBuild, loadSystem, systemNotes } from "./ui/mach
 import * as C from "./ui/comfy.js";
 import { editBrush } from "./ui/stage.js";
 import { initLive, poke as pokeLive, refresh as refreshLive, liveMode, setLiveMode, livePreviews } from "./live.js";
-import { emitterPanel, basicFill, emitterKind, ownValues, SHAPES, SHAPE, shapeOf, shapeFixed, setAdv, effStyle } from "./emitter.js";
+import { emitterPanel, basicFill, emitterKind, ownValues, SHAPES, SHAPE, shapeOf, shapeFixed, setAdv, effStyle, guideNow } from "./emitter.js";
 import { initShotLine, lineState, describe as describeLine, typedByHand } from "./shotline.js";
 import { enhance, enhancer, bonsaiStatus, wordDiff, hasBonsai, bonsaiSetup, startBonsaiSetup, resetBonsai } from "./ui/enhance.js";
 import { initWish, suggestButton, wishResults } from "./wish.js";
@@ -883,8 +883,10 @@ function liveBlock(e, adv, st) {
     + `${hd.mode === "hold" ? `${fmtSec(hd.n / hd.fps)} on frame ${hd.frame + 1}` : `${hd.n} frames`} · ${((ls.server?.total ?? ls.ms) / 1000).toFixed(1)} s.`));
   if (mine && ls.status === "ready") {
     for (const [cls, text] of LEFT_OUT) if ((ls.leftOut || []).some((x) => x.startsWith(cls))) kids.push(h("p", { class: "muted small" }, text));
-    kids.push(h("p", { class: "muted small" }, st.cost === "gen" ? "How the AI turns them into sparks, smoke or flames shows only in the run."
-      : "Made by the particles alone: the run draws them as they show here."));
+    const guided = guideNow(P.styleDef(e.kind, e.style), e) === "particles";
+    kids.push(h("p", { class: "muted small" }, st.cost !== "gen" ? "Made by the particles alone: the run draws them as they show here."
+      : guided ? "How the AI turns them into sparks, smoke or flames shows only in the run."
+        : "Drawn over the AI's element as they show here; the element itself shows only in the run."));
   }
   if (st.variant === "dissolve") {
     if (mine && ls.status === "ready") kids.push(h("p", { class: "muted small" }, "Dark where the object is gone: the run fills it with the scene."));
@@ -907,15 +909,18 @@ function prerollRows(hd) {
     h("p", { class: "muted small" }, "The particles run this long before the clip starts, so the first frame is already full (snow, rain).")].filter(Boolean);
 }
 function emitterCtx(e, st) {
-  const ls = S.ui.liveSim, c = S.getShot().clip;
-  const hd = ls && ls.effect === e.id && ls.clip === c?.name ? ls.data?.header : null;
+  const c = S.getShot().clip;
+  const mine = (x) => x && x.effect === e.id && x.clip === c?.name;
+  const sim = mine(S.ui.liveSim) && S.ui.liveSim.data?.header ? S.ui.liveSim : null;
+  const ls = sim || (mine(S.ui.liveValues) && S.ui.liveValues.header ? { ...S.ui.liveValues, data: { header: S.ui.liveValues.header } } : null);
+  const hd = ls ? ls.data.header : null;
   const kind = emitterKind(st);
   const own = ownValues(fx());
   const back = Object.fromEntries(Object.entries(hd?.base || {}).filter(([k]) => k !== "direction" && !(k in own)));
   return { e, st, kind, f: fx(), api, own, P: hd?.params ? { ...hd.params, ...back, ...own } : null, B: hd?.base || null, amount: hd?.amount ?? 1,
     fresh: !!hd && ls.status === "ready", busy: !!hd && ls.status === "running" && !ls.lookOnly,
     ui: { seg, toggle, group, note, link, open: setOpen },
-    extras: { seed: () => particleSeed(e), preroll: () => (kind === "particles" ? prerollRows(hd) : []) } };
+    extras: { seed: () => particleSeed(e), preroll: () => (kind !== "dissolve" ? prerollRows(hd) : []) } };
 }
 function particleSeed(e) {
   const locked = !!e.seedLocked;

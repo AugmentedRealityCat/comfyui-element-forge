@@ -177,7 +177,9 @@ Particle styles also ask where the particles start. Some need a click, others th
 | **Drawn path** | Follows the strokes you paint on the canvas while this step is open. |
 | **Particles** | The emitter shapes where and how it moves; the AI paints the look. |
 
-**Guide strength** <sub>Advanced</sub> sets how closely the AI follows. Each style brings the guide it was tested with.
+**Guide strength** <sub>Advanced</sub> sets how closely the AI follows. Each style brings the guide it was tested with; every style can take any guide.
+
+- **The same emitter for every style** <sub>Advanced</sub><br>The emitter shows the same groups and controls whatever the style: a preset only sets their values. An AI element shows the particles it would start from; they come in when they guide the AI, are drawn over its element (**Also draw the particles**) or make it (**Made by: Particles only**). **Let them guide the AI** switches the guide in one click.
 
 ### Live preview
 

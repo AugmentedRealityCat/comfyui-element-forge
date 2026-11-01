@@ -210,6 +210,7 @@
     },
     {
      "id": "climb",
+     "guide_particles": "lightning climb",
      "name": "Climbs an object: fine filaments",
      "text": "Click a staff, a crown or a branch: hair-thin filaments crawl along it.",
      "cost": "gen",
@@ -247,6 +248,7 @@
     },
     {
      "id": "climb_arcs",
+     "guide_particles": "lightning climb",
      "name": "Climbs an object: blue arcs",
      "text": "The same with brighter branching arcs and a blue glow.",
      "cost": "gen",
@@ -284,6 +286,7 @@
     },
     {
      "id": "climb_drawn",
+     "guide_particles": "lightning climb",
      "name": "Climbs an object: particles only",
      "text": "Thin jagged bolts made by the particles alone, straight on the object: no AI run, fastest.",
      "cost": "calc",

@@ -100,7 +100,7 @@ The app guides you through five steps:
 <summary><b>3 · Effect · Advanced</b> &nbsp;·&nbsp; live particle simulation, guides for the AI</summary>
 <br>
 
-- **Live, without AI**<br>The **Emitter** shows every control of a particle style. The live preview simulates the particles on your clip with the same engine and seed as the run.
+- **Live, without AI**<br>The **Emitter** shows the same controls for every style: a preset only sets their values. The live preview simulates the particles on your clip with the same engine and seed as the run.
 - **Part of the scene**<br>The clip's depth hides particles behind nearer objects and lets them bounce, stick, slide or die on surfaces. The object's mask and track carry the emitter; the clip's motion and the camera move them along.
 - **Three uses**<br>Keep the simulation as the finished effect, let it guide LTX-2.5, or draw it over the AI element.
 - **Guides for the AI**<br>Besides the particles, the AI can follow the object's shape or a path you paint on the canvas.
@@ -200,7 +200,7 @@ Start with a short clip and an overlay effect.
 ## Make your own effects
 
 1. **Describe it**<br>Choose **Your own effect** and describe any element in words. It is generated with LTX-2.5 and stays on the point you click. Things that glow work best.
-2. **Shape it with particles**<br>Switch the app to **Advanced**. In **Effect**, the **Emitter** shows every control of a particle style. Changed values are highlighted and can be reset one by one. **✦ Fill from the prompt** sets them from your words with the optional Bonsai model. The **live preview** simulates the particles on your clip with the same engine and seed as the run. It needs no AI, and the particles already react to the scene: they hide behind nearer objects, collide with surfaces and move with the clip.
+2. **Shape it with particles**<br>Switch the app to **Advanced**. In **Effect**, the **Emitter** shows the same controls for every style; a preset only sets their values. Changed values are highlighted and can be reset one by one. **✦ Fill from the prompt** sets them from your words with the optional Bonsai model. The **live preview** simulates the particles on your clip with the same engine and seed as the run. It needs no AI, and the particles already react to the scene: they hide behind nearer objects, collide with surfaces and move with the clip.
 3. **Keep it**<br>**Save as my effect** stores the style, its words, the emitter values and the switches. Clip, position and track stay with the shot. Your saved effects appear under **My effects** for every clip, ready to load, rename or delete.
 
 ### Particles in detail
@@ -247,13 +247,14 @@ The AI can also follow an object's shape (a flame wraps round a fist) or a path 
 
 | Group | Controls |
 |:---|:---|
-| **Source** | Emitter shape and size, maximum particles alive at once |
+| **Source** | Guide for the AI, the particles it starts from, also draw them over the AI's element, emitter shape and size, maximum particles alive at once |
 | **Emission** | Rate, burst, timing, pre-roll |
-| **Motion** | Direction and spread, bunching to the centre, speed and its variation, speed at the end, speed limit, how far the particles follow the emitter and the clip |
+| **Motion** | Direction and spread, bunching to the centre, speed and its variation, speed at the end, speed limit, how far the particles follow the emitter and the clip, the AI's Follows motion |
 | **Particle** | Life, size and colour over life, colour variation, sprite, trail, glow, flicker, fades, motion blur, opacity, spin, a second class of small particles |
 | **Merge** | Blur, choke, edge and fill of a single body |
 | **Forces** | Gravity, wind, drag, turbulence (fades in, calmed by drag), vortex, attraction to B, flocking (reach, pull) |
 | **Contact & depth** | Collision, bounce, friction, lying time, depth offset and spread, hidden by the scene |
+| **Paths** | Lightning styles: width, jaggedness, branches, a new shape every few frames |
 
 With the optional Bonsai model, **✦ Fill from the prompt** proposes these values from the effect's words; you tick what to apply.
 

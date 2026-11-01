@@ -6,7 +6,7 @@ import { efaValues, estimate, ltxFrames, RUN_STEPS, runStepOf } from "./ui/run.j
 import { mountStage, render as renderCanvas, releaseMedia, restoreMedia, togglePlay, loadNav, wheelZooms, dragPans, presentResult } from "./ui/stage.js";
 import { mountTimeline } from "./ui/timeline.js";
 import { mountPanel } from "./panel.js";
-import { emitterKind, PANEL_ADV, AI_GUIDE } from "./emitter.js";
+import { PANEL_ADV, AI_GUIDE, ALSO_DRAW } from "./emitter.js";
 import { beforeRun as shotLineBeforeRun } from "./shotline.js";
 import { addRun } from "./finish.js";
 import { noteQueued, takeRecipe } from "./versions.js";
@@ -302,11 +302,10 @@ function applyCtx(ctx) {
     if (ctx.seed) e.seed = { mode: ctx.seed.mode || "keep", value: ctx.seed.value ?? null };
     e.where.word = ctx.word || "";
     const frame = styleDef(e.kind, e.style)?.placement === "frame";
-    const parts = emitterKind(styleDef(e.kind, e.style)) === "particles";
     const adv = { ...e.adv };
     for (const k of [...ALWAYS, ...ADV_ONLY, ...GUIDE_PARTS]) delete adv[k];
     for (const [k, v] of Object.entries(ctx.adv || {})) {
-      if ((ADV_ONLY.includes(k) && ctx.mode !== "advanced") || (frame && FOLLOWS_KEYS.includes(k)) || (parts && k === "Follows motion")) continue;
+      if ((ADV_ONLY.includes(k) && ctx.mode !== "advanced") || (frame && FOLLOWS_KEYS.includes(k))) continue;
       adv[k] = v;
     }
     const st0 = styleDef(e.kind, e.style);
@@ -319,6 +318,10 @@ function applyCtx(ctx) {
       adv[DIRECT_LOOK] = true;
       adv["Particle preset"] = ctx.guideParticles || startPreset(st0);
     } else if (st0 && ctx.madeBy === "ai" && st0.settings?.[DIRECT_LOOK]) adv[DIRECT_LOOK] = false;
+    if (st0 && adv[ALSO_DRAW] && !adv.Particles && !st0.settings?.Particles) {
+      adv.Particles = true;
+      adv["Particle preset"] = ctx.guideParticles || startPreset(st0);
+    }
     if (st0 && ctx.guideParticles && (adv.Particles || st0.settings?.Particles)) adv["Particle preset"] = ctx.guideParticles;
     e.adv = adv;
   });

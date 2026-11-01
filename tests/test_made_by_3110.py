@@ -55,4 +55,11 @@ same = an.apply_effect({}, {"effect_style": "sparks/burst", "made_by": "style de
 check("Particles" not in same and DIRECT not in same and "Particle preset" not in same, "style default changes nothing")
 check("Particle preset" not in an.apply_effect({}, {"effect_style": "fire/flame", "guide_particles": "snow"}),
       "chosen particles do nothing for an AI element without particles")
+GUIDE = "Guide for the AI (particles / drawn path / object shape / none)"
+gs = an.apply_effect({}, {"effect_style": "sparks/burst", "mode": "advanced", "guide": "object shape"})
+check(gs.get(GUIDE) == "object shape" and "Particle preset" not in gs, "a particle style guided by the object's shape keeps its particles")
+fm = an.apply_effect({}, {"effect_style": "sparks/burst", "mode": "advanced", "follows_motion": True})
+check(fm.get("Follows motion") is True, "Follows motion counts for a particle style")
+gp = an.apply_effect({}, {"effect_style": "fire/flame", "mode": "advanced", "guide": "particles"})
+check(gp.get("Particles") is True and gp.get("Particle preset") == "fire", "an AI flame guided by particles starts from its own")
 print(f"{ok} checks passed")
