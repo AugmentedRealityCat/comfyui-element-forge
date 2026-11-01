@@ -120,12 +120,31 @@ const PARTICLES = {
       key("friction", "Friction", 0, 1, 0.05)],
   },
 };
+const PATHS = [["particles", "None", "Only the particles"], ["bolt", "Bolt", "A bolt from A to B (without B it strikes down)"],
+  ["climb", "Climbs", "A charge climbs the thin parts of the object and jumps from its tips"],
+  ["crack", "Cracks", "Cracks spread from A over the surface"]];
+const PATH_EXPL = {
+  particles: "No path: only the particles. A path is drawn over them, in the same colours.",
+  bolt: "From point A to point B; without B it strikes down. Shift-click sets B.",
+  climb: "It climbs the thin parts of the object you clicked: needs the object's track (Position).",
+  crack: "Cracks spread from point A over the surface; the clip's depth makes nearer ones wider.",
+};
 const PATH = {
-  particle: {
-    main: [key("width", "Width", 0.3, 10, 0.1, { unit: "px" }), key("glow", "Glow", 0, 5, 0.05),
-      key("roughness", "Jaggedness", 0, 1, 0.01), key("branches", "Branches", 0, 20, 1, { int: true })],
-    more: [key("reroll_frames", "New shape every", 1, 12, 1, { unit: "frames", int: true })],
-  },
+  main: [key("width", "Width", 0.3, 10, 0.1, { unit: "px" }), key("roughness", "Jaggedness", 0, 1, 0.01),
+    key("branches", "Branches", 0, 20, 1, { int: true })],
+  bolt: [key("reroll_frames", "New shape every", 1, 12, 1, { unit: "frames", int: true }),
+    key("fine_rough", "Fine jaggedness", 0, 1, 0.01, { tip: "The finest level of the bolt: 0 = smooth in the small" }),
+    key("grow_seconds", "Grows in", 0, 3, 0.05, { unit: "s", tip: "0: there at once. Else it grows from A to B in this time" })],
+  climb: [key("climb_seconds", "Climb time", 0.05, 3, 0.05, { unit: "s", tip: "One climb from the base of a thin part to its tip" }),
+    key("climb_rough", "Zigzag off the object", 0, 6, 0.05), key("climb_pitch", "Jag spacing", 0, 0.3, 0.005, { tip: "Share of the part's length; 0 = hugs it" }),
+    key("climb_zigzag", "Fine zigzag", 0, 20, 0.5, { unit: "px", tip: "Crackles along the object (At 1080 px)" }),
+    key("climb_head", "Bright head", 0, 1, 0.05, { tip: "0: glows evenly, 1: dark tail, bright head" }),
+    key("climb_short", "Dim short stretches", 0, 600, 5, { unit: "px", tip: "Shorter climbs glow dimmer and fork less (At 1080 px)" }),
+    key("fork_depth", "Forks fork again", 1, 4, 1, { int: true })],
+  crack: [key("crack_speed", "Spread speed", 10, 1500, 5, { unit: "px/s" }), key("crack_length", "Length", 20, 3000, 10, { unit: "px" }),
+    key("crack_branch", "Branching", 0, 1, 0.01), key("crack_turn", "Curl", 0, 1.5, 0.01), key("crack_step", "Step", 1, 30, 0.5, { unit: "px" }),
+    key("crack_seeds", "Start points", 1, 20, 1, { int: true }), key("crack_taper", "Wide at the start", 0, 2, 0.05),
+    key("relief", "Grooves", 0, 1, 0.05, { tip: "Lines read as grooves in the surface (dark rim, lit lower lip)" })],
 };
 const DISSOLVE = {
   emission: {
@@ -291,13 +310,14 @@ function advNum(ctx, name, label, min, max, step, dflt, tip) {
 
 const rows = (ctx, list) => list.map((c) => numRow(ctx, c));
 const rowName = (x) => x?.querySelector?.(".em-label")?.firstChild?.textContent || x?.querySelector?.(".toggle span:last-child")?.textContent || "";
-function box(ctx, key_, title, main, more, explain, summary = "") {
+function box(ctx, key_, title, main, more, explain, summary = "", moreName = title.replace(/ \(.*\)$/, "").toLowerCase()) {
   const n = [...main, ...more].filter((x) => x?.classList?.contains("changed")).length;
   const names = more.map(rowName).filter(Boolean);
   return ctx.ui.group(`em-${key_}`, title, () => [
     explain ? h("p", { class: "muted small" }, explain) : null,
     ...main,
-    more.length ? ctx.ui.group(`em-${key_}-more`, `More ${title.replace(/ \(.*\)$/, "").toLowerCase()} settings (${more.length})`, () => more,
+    more.length ? ctx.ui.group(`em-${key_}-more`,
+      `More ${moreName} settings (${more.filter((x) => !x?.classList?.contains("sub")).length})`, () => more,
       { preview: names.join(" · "), badge: more.filter((x) => x?.classList?.contains("changed")).length ? "changed" : "", cls: "em-more" }) : null,
   ], { hint: summary, badge: n ? `${n} changed` : "", cls: "em-group" });
 }
@@ -390,16 +410,19 @@ function changedCount(ctx) {
   if (e.dir != null && !ctx.st.placement?.startsWith("ab")) n += Math.round(e.dir) !== Math.round(ctx.B?.direction ?? (ctx.kind === "dissolve" ? 90 : -1)) ? 1 : 0;
   if (e.depth) n += 1;
   for (const k of [FOLLOW_STRENGTH, FOLLOW_LAG, PREMASK, GUIDE_STRENGTH, ALSO_DRAW, DISSOLVE_BG]) if (e.adv?.[k] != null) n += 1;
+  for (const w of ["guide", "guide_particles"]) if (ctx.f?.[w] && ctx.f[w] !== "style default") n += 1;
   return n;
 }
 function resetAll(ctx) {
-  ctx.api.setFx("emitter_values", "");
   setEffect((x) => {
     x.depth = 0;
     if (ctx.kind === "dissolve") x.dir = 90; else x.dir = null;
     x.adv = { ...x.adv };
+    if (x.adv[ALSO_DRAW] && !(ctx.st0 || ctx.st).settings?.Particles) { delete x.adv.Particles; delete x.adv["Particle preset"]; }
     for (const k of [FOLLOW_STRENGTH, FOLLOW_LAG, PREMASK, GUIDE_STRENGTH, ALSO_DRAW, DISSOLVE_BG]) delete x.adv[k];
   }, "emitter");
+  ctx.api.setFx("emitter_values", "");
+  for (const w of ["guide", "guide_particles"]) if (ctx.f?.[w] && ctx.f[w] !== "style default") ctx.api.setFx(w, "style default");
 }
 
 const ALL_PARTICLE_KEYS = [...Object.values(PARTICLES).flatMap((g) => [...g.main, ...g.more]),
@@ -462,7 +485,7 @@ export function emitterPanel(ctx) {
     out.push(h("p", { class: "muted small em-unused" }, "The AI paints this element freely: the particles below come in when they guide it, are drawn over it (Source) or make it (Made by: Particles only). ",
       ui.link("Let them guide the AI", () => ctx.api.setFx("guide", guideDefault(ctx.st0 || st) === "particles" ? "style default" : "particles"))));
   }
-  return out.concat(fillRows(ctx, fillControls(ctx), (r) => applyFill(ctx, r)), particleGroups(ctx), P.path && P.path !== "particles" ? pathGroup(ctx) : []);
+  return out.concat(fillRows(ctx, fillControls(ctx), (r) => applyFill(ctx, r)), particleGroups(ctx), pathGroup(ctx));
 }
 
 function particleGroups(ctx) {
@@ -524,9 +547,12 @@ function depthWrapOf(ctx) {
   return depthWrap(ctx, cur, base, mine, (v) => setEffect((x) => { x.depth = +(v - base).toFixed(3); }, "emitter"));
 }
 function pathGroup(ctx) {
-  return [box(ctx, "path", "Paths", [h("p", { class: "muted small" }, ctx.st.variant === "climb" ? "It climbs the thin parts of the object you clicked."
-      : "From point A to point B."), ...rows(ctx, PATH.particle.main)], rows(ctx, PATH.particle.more), "",
-    `${ctx.st.variant === "climb" ? "climbs the object" : "A to B"} · width ${num_(ctx.P.width)} px · ${num_(ctx.P.branches, 0)} branches`)];
+  const { P } = ctx, cur = P.path || "particles";
+  const sub = (t, list) => [h("div", { class: "label sub" }, t), ...rows(ctx, list)];
+  return [box(ctx, "path", "Paths", [choiceRow(ctx, "path", "Path", PATHS, "A path drawn over the particles: bolt, climbing charge or cracks"),
+    h("p", { class: "muted small" }, PATH_EXPL[cur] || ""), ...rows(ctx, PATH.main)],
+  [...sub("Bolt", PATH.bolt), ...sub("Climbs", PATH.climb), ...sub("Cracks", PATH.crack)], "",
+  cur === "particles" ? "none" : `${pname(PATHS, cur).toLowerCase()} · width ${num_(P.width)} px · ${num_(P.branches, 0)} branches`, "path")];
 }
 function aiFollowRows(ctx) {
   const { e, f, ui } = ctx;

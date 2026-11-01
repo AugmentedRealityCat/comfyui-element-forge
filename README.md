@@ -254,7 +254,7 @@ The AI can also follow an object's shape (a flame wraps round a fist) or a path 
 | **Merge** | Blur, choke, edge and fill of a single body |
 | **Forces** | Gravity, wind, drag, turbulence (fades in, calmed by drag), vortex, attraction to B, flocking (reach, pull) |
 | **Contact & depth** | Collision, bounce, friction, lying time, depth offset and spread, hidden by the scene |
-| **Paths** | Lightning styles: width, jaggedness, branches, a new shape every few frames |
+| **Paths** | None, a bolt from A to B, a charge climbing the object, or cracks spreading from A, drawn over the particles: width, jaggedness, branches and each path's own values |
 
 With the optional Bonsai model, **✦ Fill from the prompt** proposes these values from the effect's words; you tick what to apply.
 

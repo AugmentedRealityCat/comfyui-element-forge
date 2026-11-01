@@ -1655,7 +1655,9 @@ def make_paths(P, em, seed, target=None):
                 continue
             rng = np.random.default_rng(seed * 7919 + i // rr)
             a = em.a[i]
-            b = tgt[i] if tgt is not None else (em.b[i] if em.b is not None else _ground_point(em, i, a, 0.35 * H))
+            b = tgt[i] if tgt is not None else (em.b[i] if em.b is not None else None)
+            if b is None or np.hypot(*(b - a)) < 2.0:
+                b = _ground_point(em, i, a, 0.35 * H)
             main = bolt_path(a, b, rng, P["roughness"], 6, P["fine_rough"] if P["fine_rough"] > 0 else None)
             grow = 1.0 if P["grow_seconds"] <= 0 else np.clip((t - t0) / P["grow_seconds"], 0, 1)
             flick = 0.65 + 0.35 * rng.uniform()
@@ -1671,7 +1673,7 @@ def make_paths(P, em, seed, target=None):
                 out[i].append((br, P["width"] * ps * 0.5, np.linspace(flick, 0.0, len(br)), em.z[i]))
     elif kind == "climb":
         if em.masks is None:
-            raise ValueError("lightning climb needs the object mask (the thin parts the charge climbs)")
+            raise ValueError("a climbing path needs the object mask (the thin parts it climbs): click the object in Position and track it")
         rr = max(1, int(P["reroll_frames"]))
         cf = max(2.0, P["climb_seconds"] * fps)
         R = P["roughness"]
