@@ -54,6 +54,35 @@ export async function suggest(e, clip, wish, allowed) {
   return { proposal, seconds: r.seconds };
 }
 
+const PICTURE = `${SYSTEM}
+- The picture is a collage. Left: reference pictures of the effect the user wants. Right: the frame of the user's clip; the effect goes at the yellow ring, inside the yellow frame.
+- Make the reference's effect at that place: pick the style that comes closest to it, and write look, motion and contact so they describe the reference's effect (colour, shape, size, texture, how it moves), fitted to what is at the yellow mark. Leave out the reference's background, people and objects.
+- The yellow marks are only in this collage, the user does not see them: never mention them or the collage in note. A yellow ring means the place is set already: then note does not ask to click it.`;
+
+export async function fromPictures(e, clip, images, words, allowed) {
+  const styles = P.presets().effects.flatMap((f) => f.styles.filter(allowed).map((s) => ({ id: `${f.id}/${s.id}`, effect: f.name, style: s.name, text: s.text })));
+  const list = styles.map((s) => `${s.id}: ${s.effect} – ${s.style}. ${s.text || ""}`).join("\n");
+  const wish = String(words || "").trim() || "Make the effect of the reference pictures at the yellow mark.";
+  const text = `Styles:\n${list}\n\nCurrent settings: ${JSON.stringify(current(e, clip))}\n\nWish: ${wish}`;
+  const a = e.where?.a ? [e.where.a.x, e.where.a.y] : null;
+  const box = e.box ? [e.box.x, e.box.y, e.box.w, e.box.h] : null;
+  const r = await postJSON("/element-forge/api/bonsai/reference", { system: PICTURE, text, images, clip: clip?.name || null, time: e.timing.start || 0,
+    a, box, schema: schema(styles.map((s) => s.id)), max_tokens: 600 });
+  let proposal;
+  try { proposal = JSON.parse(r.text); } catch { throw new Error("Bonsai did not answer in the expected form. Try again."); }
+  return { proposal, seconds: r.seconds, ref: r.ref };
+}
+
+export async function smallPicture(file, side = 1024) {
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, side / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close?.();
+  return c.toDataURL("image/jpeg", 0.9);
+}
+
 export function changes(e, p, clip) {
   const out = [];
   const add = (key, label, from, to) => { if (JSON.stringify(from) !== JSON.stringify(to)) out.push({ key, label, from, to }); };

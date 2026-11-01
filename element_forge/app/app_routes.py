@@ -1,5 +1,7 @@
 import asyncio
+import collections
 import hashlib
+import io
 import json
 import os
 import re
@@ -1163,6 +1165,92 @@ async def ef_bonsai(request):
     return web.json_response({"text": text, "seconds": secs, "tokens_per_second": tps})
 
 
+REF_SHEETS = collections.OrderedDict()
+
+
+def _picture(data_url):
+    import base64
+    from PIL import Image, ImageOps
+    head, _, b64 = str(data_url).partition(",")
+    if not head.startswith("data:image/") or not b64:
+        raise ValueError("a reference must be a picture (PNG, JPEG or WebP)")
+    raw = base64.b64decode(b64)
+    if len(raw) > 12 * 1024 * 1024:
+        raise ValueError("a reference picture is larger than 12 MB")
+    with Image.open(io.BytesIO(raw)) as im:
+        return ImageOps.exif_transpose(im).convert("RGB")
+
+
+def reference_sheet(refs, frame, a=None, box=None, side=1024):
+    from PIL import Image, ImageDraw
+    H = side * 9 // 16
+    lw, rw = side * 2 // 5, side - side * 2 // 5
+    sheet = Image.new("RGB", (side, H), (24, 24, 24))
+    d = ImageDraw.Draw(sheet)
+    refs = list(refs)[:3]
+    k = max(1, len(refs))
+    for i, im in enumerate(refs):
+        cell_h = (H - 24) // k
+        t = im.copy()
+        t.thumbnail((lw - 16, cell_h - 8))
+        sheet.paste(t, (8 + (lw - 16 - t.width) // 2, 24 + i * cell_h + (cell_h - t.height) // 2))
+    d.text((8, 6), "REFERENCE: the look to make", fill=(255, 255, 255))
+    if frame is not None:
+        f = frame.copy()
+        f.thumbnail((rw - 16, H - 32))
+        s = f.width / frame.width
+        x0, y0 = lw + 8 + (rw - 16 - f.width) // 2, 24 + (H - 32 - f.height) // 2
+        sheet.paste(f, (x0, y0))
+        if box:
+            bx, by, bw, bh = (float(v) for v in box)
+            d.rectangle([x0 + bx * s, y0 + by * s, x0 + (bx + bw) * s, y0 + (by + bh) * s], outline=(255, 210, 60), width=2)
+        if a:
+            ax, ay = x0 + float(a[0]) * s, y0 + float(a[1]) * s
+            for r, col, w in ((15, (0, 0, 0), 6), (14, (255, 210, 60), 3)):
+                d.ellipse([ax - r, ay - r, ax + r, ay + r], outline=col, width=w)
+        d.text((lw + 8, 6), "YOUR CLIP: the effect goes at the yellow mark", fill=(255, 210, 60))
+    d.line([(lw, 0), (lw, H)], fill=(90, 90, 90), width=2)
+    return sheet
+
+
+@routes.post("/element-forge/api/bonsai/reference")
+async def ef_bonsai_reference(request):
+    body = await request.json()
+    try:
+        refs = [_picture(u) for u in (body.get("images") or [])[:3]]
+    except (ValueError, OSError) as e:
+        return web.json_response({"error": str(e)}, status=400)
+    if not refs:
+        return web.json_response({"error": "add a picture of the effect first"}, status=400)
+    frame = None
+    if body.get("clip"):
+        p = _clip_path(body["clip"], stills=True)
+        if not p:
+            return web.json_response({"error": "no such clip in the input folder"}, status=404)
+        frame = await asyncio.to_thread(first_frame, p, max(0.0, float(body.get("time") or 0)))
+    sheet = await asyncio.to_thread(reference_sheet, refs, frame, body.get("a"), body.get("box"))
+    ref = hashlib.sha1(sheet.tobytes()).hexdigest()[:12]
+    REF_SHEETS[ref] = sheet
+    while len(REF_SHEETS) > 4:
+        REF_SHEETS.popitem(last=False)
+    try:
+        text, secs, tps = await asyncio.to_thread(bonsai.chat, str(body.get("text", "")), str(body.get("system", "")), sheet,
+                                                  body.get("schema"), int(body.get("max_tokens", 600)), 0.2, True)
+    except RuntimeError as e:
+        return web.json_response({"error": str(e)}, status=503)
+    return web.json_response({"text": text, "seconds": secs, "tokens_per_second": tps, "ref": ref})
+
+
+@routes.get("/element-forge/api/bonsai/reference/{ref}")
+async def ef_bonsai_reference_sheet(request):
+    sheet = REF_SHEETS.get(request.match_info["ref"])
+    if sheet is None:
+        return web.json_response({"error": "gone"}, status=404)
+    buf = io.BytesIO()
+    sheet.save(buf, "JPEG", quality=85)
+    return web.Response(body=buf.getvalue(), content_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
 @routes.post("/element-forge/api/bonsai/particles")
 async def ef_bonsai_particles(request):
     body = await request.json()
@@ -1170,8 +1258,10 @@ async def ef_bonsai_particles(request):
         system, text, sch, controls = PA.request(body)
     except ValueError as e:
         return web.json_response({"error": str(e)}, status=400)
-    image = None
-    if body.get("clip"):
+    image = REF_SHEETS.get(str(body.get("ref") or ""))
+    if image is not None:
+        system = PA.PICTURE_SYSTEM
+    elif body.get("clip"):
         p = _clip_path(body["clip"], stills=True)
         if p:
             image = await asyncio.to_thread(first_frame, p, max(0.0, float(body.get("time") or 0)))

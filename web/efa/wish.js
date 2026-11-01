@@ -1,7 +1,8 @@
 import * as S from "./ui/state.js";
 import * as P from "./ui/presets.js";
-import { suggest, changes, stillToDo } from "./ui/assist.js";
+import { suggest, changes, stillToDo, fromPictures, smallPicture } from "./ui/assist.js";
 import { bonsaiStatus, whyNotSeeing } from "./ui/enhance.js";
+import { useReference } from "./fill.js";
 
 const SUPPORTED = ["style", "strength", "look", "motion", "contact", "direction", "depth", "start", "end", "object", "light", "glow"];
 const WORDS = { look: "look_words", motion: "motion_words", contact: "contact_words" };
@@ -36,7 +37,11 @@ async function ask(x) {
 }
 
 function apply(x) {
-  const { proposal: p, list } = state;
+  const e = applyProposal(x, state);
+  state = { status: "done", todo: e ? stillToDo(e) : "" };
+  x.render();
+}
+function applyProposal(x, { proposal: p, list }) {
   const keys = new Set(list.map((c) => c.key));
   const to = Object.fromEntries(list.map((c) => [c.key, c.to]));
   if (keys.has("style")) { const [kind, style] = p.style.split("/"); x.chooseStyle(kind, style); }
@@ -53,9 +58,87 @@ function apply(x) {
     if (keys.has("light")) e.adv = { ...e.adv, Light: to.light !== "off" };
     if (keys.has("glow")) e.adv = { ...e.adv, Glow: to.glow !== "off" };
   }, "wish");
-  const e = S.activeEffect();
-  state = { status: "done", todo: e ? stillToDo(e) : "" };
+  return S.activeEffect();
+}
+
+const MAX_PICS = 3;
+let pics = [];
+let pic = null;
+
+async function addPictures(x, files) {
+  const imgs = [...(files || [])].filter((f) => /^image\//.test(f.type)).slice(0, MAX_PICS - pics.length);
+  if (!imgs.length) return;
+  try {
+    for (const f of imgs) pics.push({ url: await smallPicture(f), name: f.name || "pasted picture" });
+    pic = null;
+  } catch {
+    pic = { status: "failed", error: "This picture could not be read. PNG, JPEG or WebP work." };
+  }
   x.render();
+}
+
+async function askPictures(x) {
+  const sh = S.getShot();
+  pic = { status: "busy" };
+  x.render();
+  try {
+    const e = effectNow();
+    const { proposal, ref } = await fromPictures(e, sh.clip, pics.map((p) => p.url), "", () => true);
+    const list = changes(e, proposal, sh.clip).filter((c) => SUPPORTED.includes(c.key));
+    pic = { status: "ready", proposal, list, ref, note: String(proposal.note || "").slice(0, 200) };
+  } catch (err) {
+    pic = { status: "failed", error: err.message };
+  }
+  x.render();
+}
+
+function applyPictures(x) {
+  const e = pic.list.length ? applyProposal(x, pic) : S.activeEffect();
+  useReference(S.getShot().active, pic.ref);
+  pic = { status: "done", todo: e ? stillToDo(e) : "" };
+  x.render();
+}
+
+export function pictureRows(x) {
+  if (!canWish()) return [];
+  const { h, link, note } = x;
+  const busy = pic?.status === "busy";
+  const e = S.activeEffect();
+  const input = h("input", { type: "file", accept: "image/png,image/jpeg,image/webp", multiple: true, hidden: true,
+    onchange: (ev) => { addPictures(x, ev.target.files); ev.target.value = ""; } });
+  const thumbs = pics.map((p, i) => h("span", { class: "ref-thumb", title: p.name },
+    h("img", { src: p.url, alt: p.name }),
+    h("button", { class: "ref-x", "aria-label": `Remove ${p.name}`, title: "Remove", disabled: busy,
+      onclick: () => { pics.splice(i, 1); pic = null; x.render(); } }, "×")));
+  const rows = [h("div", { class: "label" }, "From a picture"),
+    h("div", { class: "row gap ref-row" }, ...thumbs,
+      pics.length < MAX_PICS ? h("button", { class: "btn ghost small", disabled: busy, title: "Add a picture of an effect you like (or drop or paste one here)",
+        onclick: () => input.click() }, pics.length ? "+ Picture" : "Add picture") : null, input),
+    pics.length ? h("div", { class: "row gap fill-row" },
+      h("button", { class: "chip", disabled: busy, title: "Bonsai looks at your pictures beside the clip and proposes the style, its words and then the particles",
+        onclick: () => askPictures(x) }, busy ? "Looking at your pictures…" : "✦ Make it like this"),
+      busy ? h("span", { class: "muted small" }, "about 30 s") : null)
+      : h("p", { class: "muted small" }, "A picture of an effect you like: Bonsai makes it at your place in the clip."),
+    pics.length && !e?.where?.a ? h("p", { class: "muted small" }, "Click the place in the preview first, so Bonsai sees where it goes.") : null];
+  if (pic?.status === "failed") rows.push(note("err", pic.error));
+  if (pic?.status === "ready") {
+    rows.push(h("div", { class: "field fill-result" }, h("div", { class: "label" }, pic.list.length ? "This is what I would set" : "The effect already fits"),
+      pic.list.length ? h("ul", { class: "small" }, ...pic.list.map((c) => h("li", {}, h("span", { class: "strong" }, c.label), ": ",
+        h("span", { class: "muted" }, String(c.from ?? "–")), " → ", String(c.to ?? "until the end")))) : null,
+      pic.note ? h("p", { class: "muted small" }, pic.note) : null,
+      pic.ref ? h("details", { class: "small" }, h("summary", { class: "muted" }, "What Bonsai saw"),
+        h("img", { class: "ref-sheet", src: `/element-forge/api/bonsai/reference/${pic.ref}`, alt: "Your pictures beside the clip, the place marked" })) : null,
+      h("div", { class: "row gap" },
+        h("button", { class: "btn small", disabled: !pic.list.length && !e, title: "Then Bonsai sets the particles from the pictures too",
+          onclick: () => applyPictures(x) }, pic.list.length ? "Apply" : "Set the particles"),
+        h("button", { class: "btn ghost small", onclick: () => { pic = null; x.render(); } }, "Discard"))));
+  }
+  if (pic?.status === "done") rows.push(h("p", { class: "muted small" }, pic.todo || "Applied. Bonsai now sets the particles from the pictures too (below, at Particles).", " ",
+    link("OK", () => { pic = null; x.render(); })));
+  return [h("div", { class: "field ref-field", tabindex: "-1",
+    ondragover: (ev) => { if (!busy) ev.preventDefault(); },
+    ondrop: (ev) => { ev.preventDefault(); if (!busy) addPictures(x, ev.dataTransfer?.files); },
+    onpaste: (ev) => { const fs = [...(ev.clipboardData?.files || [])]; if (fs.length && !busy) { ev.preventDefault(); addPictures(x, fs); } } }, ...rows)];
 }
 
 export function suggestButton(x, text) {

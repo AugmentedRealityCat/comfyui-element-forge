@@ -9,6 +9,8 @@ const SPRITES = ["soft", "dot", "flake", "puff", "wisp", "streak", "spark", "chu
 const CHOICE_LABEL = { mode: "Mode", collide: "Collision", sprite: "Sprite" };
 let state = null;
 let words = "";
+const pictures = new Map();
+export function useReference(id, ref) { if (id && ref) pictures.set(id, { ref, auto: true }); }
 
 const fmt = (v) => (typeof v === "number" ? String(+v.toFixed(3)) : String(v));
 const tailOff = (t) => String(t || "").replace(/\s*Filmed on a pure black background[^.]*\.\s*$/i, "").trim();
@@ -24,7 +26,8 @@ function prompts(e, f) {
 async function ask(ctx, controls, text, basic) {
   const { e, f, P: V } = ctx;
   const pr = prompts(e, f);
-  const prompt = pr && !basic ? { what: pr.now } : { what: text };
+  const fromPics = pictures.has(e.id) && !text;
+  const prompt = pr && (!basic || fromPics) ? { what: pr.now } : { what: text };
   const style = `${P.effectDef(e.kind)?.name || e.kind} – ${P.styleDef(e.kind, e.style)?.name || e.style}`;
   state = { effect: e.id, status: "busy" };
   S.setUI({});
@@ -33,7 +36,7 @@ async function ask(ctx, controls, text, basic) {
       prompt, style_prompt: pr ? { what: pr.own } : { what: P.styleDef(e.kind, e.style)?.text || "" }, style, controls,
       now: { mode: V.direction_mode, collide: V.collide, sprite: V.sprite,
         colours: (V.colors || []).map(([t, c]) => `${Math.round(t * 100)}%: ${c.map((x) => x.toFixed(2)).join(" ")}`).join(" -> ") },
-      modes: MODES, collides: COLLIDE, sprites: SPRITES, stops: V.colors,
+      modes: MODES, collides: COLLIDE, sprites: SPRITES, stops: V.colors, ref: pictures.get(e.id)?.ref,
     });
     if (state?.effect !== e.id) return;
     state = { effect: e.id, status: "ready", ...r, off: new Set() };
@@ -70,10 +73,14 @@ export function fillRows(ctx, controls, applyAll, basic = false) {
   const mine = state?.effect === e.id ? state : null;
   const pr = basic ? null : prompts(e, f);
   const busy = mine?.status === "busy";
+  const pic = pictures.get(e.id);
   const go = () => ask(ctx, controls, words.trim(), basic);
-  const pill = h("button", { class: "chip", disabled: busy || (!pr && !words.trim()),
-    title: pr ? `Bonsai reads the prompt and sets the values its words ask for: "${pr.now.slice(0, 160)}"` : "Bonsai sets the values your words ask for",
-    onclick: go }, busy ? (pr ? "Reading the prompt…" : "Reading your words…") : pr ? "✦ Fill from the prompt" : "✦ Fill in");
+  if (pic?.auto && !mine) { pic.auto = false; queueMicrotask(go); }
+  const pill = h("button", { class: "chip", disabled: busy || (!pr && !words.trim() && !pic),
+    title: pic ? "Bonsai looks at your pictures again and sets the particles so they look and move like them"
+      : pr ? `Bonsai reads the prompt and sets the values its words ask for: "${pr.now.slice(0, 160)}"` : "Bonsai sets the values your words ask for",
+    onclick: go }, busy ? (pic ? "Looking at your pictures…" : pr ? "Reading the prompt…" : "Reading your words…")
+    : pic ? "✦ Fill from the pictures" : pr ? "✦ Fill from the prompt" : "✦ Fill in");
   const rows = [];
   if (basic) rows.push(h("div", { class: "label" }, "Particles in your words"));
   if (pr) rows.push(h("div", { class: "row gap fill-row" }, pill, busy ? h("span", { class: "muted small" }, "about 20 s") : null));
@@ -88,7 +95,7 @@ export function fillRows(ctx, controls, applyAll, basic = false) {
   if (mine?.status === "ready") {
     const n = count(), k = picked();
     rows.push(h("div", { class: "field fill-result" }, h("div", { class: "label" }, n ? "This is what I would set" : "Nothing to change"),
-      n ? h("ul", { class: "small fill-list" }, ...proposalList()) : h("p", { class: "muted small" }, pr ? "The values already fit the prompt." : "The values already fit your words."),
+      n ? h("ul", { class: "small fill-list" }, ...proposalList()) : h("p", { class: "muted small" }, pic ? "The values already fit your pictures." : pr ? "The values already fit the prompt." : "The values already fit your words."),
       mine.note && n ? h("p", { class: "muted small" }, mine.note) : null,
       h("div", { class: "row gap" },
         n ? h("button", { class: "btn small", disabled: !k, onclick: () => { const undo = applyAll(chosen(mine)); state = { effect: e.id, status: "done", undo, n: k }; S.setUI({}); } },

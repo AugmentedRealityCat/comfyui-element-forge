@@ -10,7 +10,7 @@ import { initLive, poke as pokeLive, refresh as refreshLive, liveMode, setLiveMo
 import { emitterPanel, basicFill, emitterKind, ownValues, SHAPES, SHAPE, shapeOf, shapeFixed, setAdv, effStyle, guideNow } from "./emitter.js";
 import { initShotLine, lineState, describe as describeLine, typedByHand } from "./shotline.js";
 import { enhance, enhancer, bonsaiStatus, wordDiff, hasBonsai, bonsaiSetup, startBonsaiSetup, resetBonsai } from "./ui/enhance.js";
-import { initWish, suggestButton, wishResults } from "./wish.js";
+import { initWish, suggestButton, wishResults, pictureRows } from "./wish.js";
 import { initMyEffects, myTiles, saveRows } from "./myeffects.js";
 import { finishRows } from "./finish.js";
 import { versionRows } from "./versions.js";
@@ -989,6 +989,7 @@ function effectBody() {
     const p = P.promptOf(e);
     if (p) kids.push(h("div", { class: "field" }, h("div", { class: "label" }, "Strength"),
       seg("Strength", [["subtle", "Subtle"], ["normal", "Normal"], ["strong", "Strong"]], fx().strength || "normal", (v) => api.setFx("strength", v))));
+    kids.push(...pictureRows(wx));
     kids.push(...quickBlock(e, effStyle(st, e)));
     if (p && !p.what) kids.push(h("div", { class: "field" }, h("div", { class: "label" }, "Your effect in words"),
       h("div", { class: "row gap" }, fxText("describe", "e.g. a glowing blue crystal"), suggestButton(wx, typed.get("describe")?.value ?? fx().describe)),

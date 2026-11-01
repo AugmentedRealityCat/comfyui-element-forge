@@ -125,6 +125,7 @@ The app guides you through five steps:
 
 - **Styles**<br>26 styles in ten groups, from flames and lightning to snow, liquid and dissolve, plus your own effect.
 - **Words**<br>Describe the look, motion and contact. **Enhance** can refine them when a language model is installed. With the optional Bonsai model, **Describe what you want** suggests a style and its words; you see each change before you apply it. For particle styles, **Particles in your words** turns a sentence such as *slow green sparks that spiral up* into emitter values.
+- **From a picture**<br>Add up to three pictures of an effect you like. Bonsai sees them beside your clip with the chosen place marked, proposes the style and its words for that spot, and then sets the particles to match the pictures.
 - **Three routes**<br>**Overlay** generates the element separately. **Inpaint** generates it inside the footage for contact with surfaces. **Particles only** draws any style with its particles, without AI generation.
 - **Several effects**<br>**＋ Effect** adds another effect to the same clip, each with its own settings and versions.
 
