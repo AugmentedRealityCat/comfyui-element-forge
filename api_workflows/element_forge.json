@@ -1373,7 +1373,7 @@
  "928": {
   "class_type": "PrimitiveInt",
   "inputs": {
-   "value": 0
+   "value": 2
   },
   "_meta": {
    "title": "Mask: steady over frames (0 = off)"

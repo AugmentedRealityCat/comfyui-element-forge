@@ -6,9 +6,10 @@
   </picture>
 </h1>
 
-<p align="center"><strong>AI effects that sit in the shot.</strong></p>
+<p align="center"><strong>AI effects you control, right in the shot.</strong></p>
 
 <p align="center">
+  <a href="#control-not-just-generation">Control</a> ·
   <a href="#get-started">Get started</a> ·
   <a href="#your-first-effect">Your first effect</a> ·
   <a href="#make-your-own-effects">Your own effects</a> ·
@@ -16,13 +17,44 @@
   <a href="#documentation">Documentation</a>
 </p>
 
-Add fire, lightning, smoke and particles to your own footage in ComfyUI. Track effects through your shot, adjust their light and colour, and export the result or separate EXR passes.
+Add fire, lightning, smoke and particles to your own footage in ComfyUI, and decide where they start, which way they move and what they touch. Element Forge simulates particles in your shot first, with its depth, objects and motion, and lets **LTX-2.5** generate the effect along them, locally. Then adjust light and colour and export the result or separate EXR passes.
 
-Use the app for a guided workflow, or connect the nodes in your own graph. AI effects are generated locally with **LTX-2.5**; particle styles also run without AI, as a live simulation that reacts to the scene.
+Use the app for a guided workflow, or connect the nodes in your own graph. The particles also work without AI, as a finished effect of their own.
 
 https://github.com/user-attachments/assets/468b014c-f544-41fe-b26f-fd6da37d78a3
 
 <p align="center"><em>The release video.</em> <a href="https://youtu.be/Cz7dW70VSNg">Watch it on YouTube</a><br><sub>AI-generated effects; stock footage.</sub></p>
+
+<br>
+
+## Control, not just generation
+
+A prompt alone decides little: the AI guesses where the effect goes, how big it is and how it moves. In Element Forge you set that yourself, and the AI fills in the look.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>Particles that know the scene</h3>
+      <p>A <b>live simulation on your clip</b>: the clip's depth hides particles behind nearer objects, they bounce, slide or stick on surfaces and move with the tracked object and the camera. Amount, speed, direction, life and forces are yours to set, and you see them <b>before any AI run</b>.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>The AI follows your particles</h3>
+      <p>The simulation is drawn for LTX-2.5 as a <b>guide</b>: as lines, heat, volume or depth. The generated effect takes the particles' <b>path, timing and spread</b> instead of inventing its own.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>Exactly where it belongs</h3>
+      <p>At a point, on an object, between two points or over the whole frame. The frame that is generated can be moved and sized <b>independently</b> of the point, so nothing is cut off.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>Masks you can correct</h3>
+      <p>Set the object's mask on <b>any frame</b>, add and leave out parts with clicks or words, and keep it <b>steady</b> where the object blurs. The effect goes behind the object or in front of it.</p>
+    </td>
+  </tr>
+</table>
+
+Light, glow, colour, placement and timing stay adjustable <b>after the run, without generating again</b>, and every run is kept as a version to compare.
 
 <br>
 

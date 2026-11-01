@@ -536,7 +536,9 @@ function lockBaseRow(st) {
       "The AI draws the effect a little differently in every frame, so its base can jitter. On: the base stays fixed on the tracked point, the effect still moves above it"),
     h("p", { class: "muted small" }, "For a flame or ball that jitters at its base. Off: only slow drift is smoothed."));
 }
-const STEADY = [[0, "Off", "The mask as the track made it"], [2, "Light", "Two frames on each side"], [4, "Strong", "Four frames on each side"]];
+const STEADY = [[0, "Off", "The mask as the track made it"], [2, "Light", "Two frames on each side; keeps fast, small parts"],
+  [4, "Strong", "Four frames on each side; smoothest on large, soft objects"]];
+const STEADY_DEFAULT = 2;
 function maskFields(e) {
   const c = S.getShot().clip, fps = c?.fps || 25, mf = R.maskFrame(e), tool = S.ui.maskTool || null;
   const edit = (fn) => S.change((sh) => {
@@ -585,7 +587,7 @@ function maskFields(e) {
       h("p", { class: "muted small" }, "Words, or a click on each part (red ring). The mask frame shows them in red.")),
     h("div", { class: "field mask" },
       h("div", { class: "label", title: "Averages each frame's mask with its neighbours, aligned to the motion" }, "Steady mask"),
-      seg("Steady mask", STEADY, +e.adv?.[R.MASK_STEADY] || 0, (v) => edit((a) => { if (v) a[R.MASK_STEADY] = v; else delete a[R.MASK_STEADY]; })),
+      seg("Steady mask", STEADY, +(e.adv?.[R.MASK_STEADY] ?? STEADY_DEFAULT), (v) => edit((a) => { if (v === STEADY_DEFAULT) delete a[R.MASK_STEADY]; else a[R.MASK_STEADY] = v; })),
       h("p", { class: "muted small" }, "Less flicker where the object blurs or the light is poor. Strong can round off fast, thin parts.")),
   ];
 }
