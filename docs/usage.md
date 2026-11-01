@@ -177,7 +177,7 @@ Particle styles also ask where the particles start. Some need a click, others th
 
 ### Placement
 
-- **Placement**<br>Basic and Advanced, every style except Dissolve and Climbs: where the element goes. **Point** stands on point A and follows it; **Area** makes it in the frame around A that you size in the canvas; **Object** covers the clicked object and moves with it; **Frame** puts it over the whole picture, no point needed; **A–B** stretches it from A to B (Shift-click B). The style's own placement is marked in the tooltip; choosing another one also starts the particles in that shape (the whole frame, the object, the line A–B) unless you set the shape yourself.
+- **Placement**<br>Basic and Advanced, every style except Dissolve and Climbs: where the element goes. **Point** stands on point A and follows it; **Area** makes it in the frame around A that you size in the canvas; **Object** covers the clicked object and moves with it; **Frame** puts it over the whole picture, no point needed; **A–B** runs it from A to B (Shift-click B): made freely, the element is stretched from A to B; with a guide or Follows motion it is painted in a frame around both points. The style's own placement is marked in the tooltip; choosing another one also starts the particles in that shape (the whole frame, the object, the line A–B) unless you set the shape yourself.
 - **Sits on A by**<br>With **Point**: the element's **Bottom** edge stands on A (a flame, a plant), or its **Centre** is on A (a glow, a swirl).
 
 ### Guide for the AI

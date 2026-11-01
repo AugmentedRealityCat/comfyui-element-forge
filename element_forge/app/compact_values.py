@@ -132,7 +132,10 @@ def uses_guide(st, effect=None):
 
 def in_window(st, effect=None):
     s = {**(st.get("settings") or {}), **((effect or {}).get("adv") or {})}
-    return st.get("placement") == "point" and (uses_guide(st, effect) or bool(s.get("Particles")) or bool(s.get("Follows motion")))
+    led = uses_guide(st, effect) or bool(s.get("Follows motion"))
+    if st.get("placement") == "ab":
+        return led and not s.get("Particles")
+    return st.get("placement") == "point" and (led or bool(s.get("Particles")))
 
 
 def base_point(st, b):

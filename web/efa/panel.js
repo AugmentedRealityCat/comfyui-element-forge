@@ -860,19 +860,24 @@ const PLACE_LINE = {
   frame: "Over the whole picture, no point needed.",
   between: "Stretches from point A to point B: Shift-click B in the canvas.",
 };
+function fromPanel(key, widget) {
+  if (!fx()[widget] || fx()[widget] === "style default") return;
+  S.change((sh) => { const x = sh.effects.find((y) => y.id === sh.active); if (x?.fromNode) { x.fromNode = { ...x.fromNode }; delete x.fromNode[key]; } }, "place");
+  api.setFx(widget, "style default");
+}
 function placeBlock(e, st) {
   if (P.placeFixed(st)) return [];
   const own = P.placeOwn(st), cur = P.placeOf(e, st);
   const out = [h("div", { class: "field" }, h("div", { class: "label" }, "Placement"),
     seg("Placement", P.PLACES.map(([k, t, tip]) => [k, t, k === own ? `${tip} · as the style has it` : tip]), cur,
-      (v) => setAdv(P.PLACEMENT, v === own ? undefined : v)),
+      (v) => { fromPanel(P.PLACEMENT, "placement"); setAdv(P.PLACEMENT, v === own ? undefined : v); }),
     h("p", { class: "muted small" }, PLACE_LINE[cur]))];
   if (cur === "point") {
     const side0 = st.settings?.[P.SIDE] || "bottom", side = P.sideOf(e, st);
     out.push(h("div", { class: "field" }, h("div", { class: "label" }, "Sits on A by"),
       seg("Sits on A by", [["bottom", "Bottom", "Its bottom edge stands on A (a flame, a plant)"], ["centre", "Centre", "Its middle is on A (a glow, a swirl)"]]
         .map(([k, t, tip]) => [k, t, k === side0 ? `${tip} · as the style has it` : tip]), side === "centre" ? "centre" : "bottom",
-      (v) => setAdv(P.SIDE, v === side0 ? undefined : v))));
+      (v) => { fromPanel(P.SIDE, "sits_on"); setAdv(P.SIDE, v === side0 ? undefined : v); })));
   }
   return out;
 }
@@ -1038,6 +1043,9 @@ function liveBlock(e, adv, st) {
   const hd = mine ? ls.data?.header : null;
   const kids = [h("div", { class: "label" }, "Live preview")];
   if (!mine || ls.status === "running") kids.push(note("ok", `Simulating the particles${e.where.a ? "" : " at the centre"}…`));
+  else if (ls.status === "failed" && /needs the object mask/.test(ls.error || "")) kids.push(note("err",
+    "The live preview needs the object's track, and the mask has changed since it was last checked. ",
+    link("Check the track in Position", () => setOpen("position"))));
   else if (ls.status === "failed") kids.push(note("err", `The live preview failed: ${ls.error || "unknown error"}`));
   else if (hd) kids.push(note("ok", `The particles as the run makes them (same engine, particle seed ${hd.seed}), `
     + `${hd.mode === "hold" ? `${fmtSec(hd.n / hd.fps)} on frame ${hd.frame + 1}` : `${hd.n} frames`} · ${((ls.server?.total ?? ls.ms) / 1000).toFixed(1)} s.`));

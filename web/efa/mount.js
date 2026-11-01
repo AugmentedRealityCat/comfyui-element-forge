@@ -304,6 +304,8 @@ function applyCtx(ctx) {
     const frame = styleOf(e)?.placement === "frame";
     const adv = { ...e.adv };
     for (const k of [...ALWAYS, ...ADV_ONLY, ...GUIDE_PARTS]) delete adv[k];
+    for (const k of Object.keys(e.fromNode || {})) if (!(k in (ctx.adv || {}))) delete adv[k];
+    e.fromNode = Object.fromEntries(NODE_SET.filter((k) => k in (ctx.adv || {})).map((k) => [k, true]));
     for (const [k, v] of Object.entries(ctx.adv || {})) {
       if ((ADV_ONLY.includes(k) && ctx.mode !== "advanced") || (frame && FOLLOWS_KEYS.includes(k))) continue;
       adv[k] = v;
@@ -327,6 +329,8 @@ function applyCtx(ctx) {
   });
 }
 
+const NODE_SET = ["Placement (auto / point / area / object / frame / between)", "Emitter side",
+  "Object crumbles under the effect (the dissolve is the plate)", "Dissolve style (plain / fire (LTX) / gold dust)", "Dissolve direction (0 up, 90 right)"];
 const FOLLOWS_KEYS = ["Sticks to scene (off = object)", "Track follows the object mask (hands, bodies)", "Fixed on screen (Follows: Screen)"];
 const ALWAYS = [...FOLLOWS_KEYS, "Own object mask (off = click)", "Object word: all alike objects (e.g. all sticks of a crown; off = the clicked one)",
   "LTX upscale x2 (latent upscaler + second pass, test)", "Inpaint (off = on black)"];

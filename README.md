@@ -10,16 +10,15 @@
 
 <p align="center">
   <a href="#control-not-just-generation">Control</a> ·
+  <a href="#examples">Examples</a> ·
+  <a href="#how-it-works">How it works</a> ·
   <a href="#get-started">Get started</a> ·
-  <a href="#your-first-effect">Your first effect</a> ·
-  <a href="#make-your-own-effects">Your own effects</a> ·
-  <a href="#more-examples">Examples</a> ·
   <a href="#documentation">Documentation</a>
 </p>
 
-Add fire, lightning, smoke and particles to your own footage in ComfyUI, and decide where they start, which way they move and what they touch. Element Forge simulates particles in your shot first, with its depth, objects and motion, and lets **LTX-2.5** generate the effect along them, locally. Then adjust light and colour and export the result or separate EXR passes.
+A prompt alone decides little: the AI guesses where an effect goes, how big it is and how it moves. **Element Forge lets you decide that.** Add fire, lightning, smoke, sparks or magic to your own footage in ComfyUI: particles simulated in your shot show the AI where to go, and the open video model **LTX-2.5** paints the look on your own GPU.
 
-Use the app for a guided workflow, or connect the nodes in your own graph. The particles also work without AI, as a finished effect of their own.
+The particles also work without AI, as a finished effect of their own. Use the guided app or the same nodes in your own graph.
 
 https://github.com/user-attachments/assets/468b014c-f544-41fe-b26f-fd6da37d78a3
 
@@ -29,70 +28,91 @@ https://github.com/user-attachments/assets/468b014c-f544-41fe-b26f-fd6da37d78a3
 
 ## Control, not just generation
 
-A prompt alone decides little: the AI guesses where the effect goes, how big it is and how it moves. In Element Forge you set that yourself, and the AI fills in the look.
+<p align="center">
+  <img src="docs/assets/examples/control-katana.gif" alt="The same katana clip twice. Left: the AI guided by the whole object turns sword, hand and handle into one glowing tube. Right: guided by particles on the blade only, sparks come from the blade while the steel, hand and handle stay as filmed." width="880">
+</p>
+<p align="center"><sub>Same clip, same model and seed. Left: the AI follows the shape of the whole object. Right: particles born only on the blade guide it, and the blade's contour is kept, so hand and handle stay as filmed.</sub></p>
 
 <table>
   <tr>
-    <td width="50%" valign="top">
-      <h3>Particles that know the scene</h3>
-      <p>A <b>live simulation on your clip</b>: the clip's depth hides particles behind nearer objects, they bounce, slide or stick on surfaces and move with the tracked object and the camera. Amount, speed, direction, life and forces are yours to set, and you see them <b>before any AI run</b>.</p>
+    <td width="33%" valign="top">
+      <h3>📍 You choose the place</h3>
+      <p>At a point, in an area, on the object, between two points or over the whole frame, for <b>every style</b>. Set the object's mask on any frame and correct it with clicks or words.</p>
     </td>
-    <td width="50%" valign="top">
-      <h3>The AI follows your particles</h3>
-      <p>The simulation is drawn for LTX-2.5 as a <b>guide</b>: as lines, heat, volume or depth. The generated effect takes the particles' <b>path, timing and spread</b> instead of inventing its own.</p>
+    <td width="33%" valign="top">
+      <h3>✨ Particles know the scene</h3>
+      <p>Depth hides them behind nearer objects; they bounce, slide or stick on surfaces and move with the object and the camera. You see them <b>live, before any AI run</b>.</p>
     </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>Exactly where it belongs</h3>
-      <p><b>Every style can go anywhere</b>: at a point (standing on it or centred), in an area you size, on the whole object, between two points or over the whole frame; the particles start in that shape. The frame that is generated can be moved and sized <b>independently</b> of the point, so nothing is cut off.</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>Masks you can correct</h3>
-      <p>Set the object's mask on <b>any frame</b>, add and leave out parts with clicks or words, <b>fix it on the frames where the track slips</b> with one more click, and keep it <b>steady</b> where the object blurs. The effect goes behind the object or in front of it.</p>
+    <td width="33%" valign="top">
+      <h3>🎯 The AI follows them</h3>
+      <p>The simulation is drawn for LTX-2.5 as a <b>guide</b>: lines, heat, volume or depth. The effect takes the particles' <b>path, timing and spread</b>.</p>
     </td>
   </tr>
 </table>
 
-Effects combine with the object they touch: turn on <b>The object crumbles</b> and a statue falls apart into particles under its own flames, with the scene behind it filled in, and its pieces keep their own forces. Colour, amount, speed and size are one click for every style: words for the AI, and the same values for the particles that guide it.
+**Also yours to decide**
 
-Light, glow, colour, placement and timing stay adjustable <b>after the run, without generating again</b>, and every run is kept as a version to compare.
+- **The object crumbles:** a statue falls apart into particles under its own flames, the scene behind it filled in.
+- **From a picture:** start from up to three pictures of an effect you like; the optional Bonsai model proposes the style, words and particle values for the spot you clicked.
+- **One-click basics:** colour, amount, speed and size for every style, as words for the AI and as values for its particles.
+- **After the run:** light, glow, colour, placement and timing change without generating again; every run is kept as a version.
 
 <br>
 
-## What you can do
+## Examples
 
-Choose from fire, lightning, sparks, smoke, magic, weather, debris, liquid and dissolve styles, or describe your own effect. The app identifies experimental styles before you generate.
+<table>
+  <tr>
+    <td align="center" width="25%" valign="top">
+      <a href="https://github.com/Zitroffi/comfyui-element-forge/releases/download/examples/orb.mp4"><img src="docs/assets/examples/orb.gif" alt="Energy around a moving ball" width="200"></a><br><strong>Energy around a ball</strong><br><sub>AI · follows the ball</sub>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <a href="https://github.com/Zitroffi/comfyui-element-forge/releases/download/examples/rose-flame.mp4"><img src="docs/assets/examples/rose-flame.gif" alt="Flame following a rose" width="200"></a><br><strong>Cold flame on a rose</strong><br><sub>AI · follows the blossom</sub>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <a href="https://github.com/Zitroffi/comfyui-element-forge/releases/download/examples/dress-sparks.mp4"><img src="docs/assets/examples/dress-sparks.gif" alt="Sparks from a spinning dress" width="200"></a><br><strong>Sparks from a dress</strong><br><sub>AI · particles start at the hem</sub>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <a href="https://github.com/Zitroffi/comfyui-element-forge/releases/download/examples/fireflies.mp4"><img src="docs/assets/examples/fireflies.gif" alt="Fireflies over a lake" width="200"></a><br><strong>Fireflies over a lake</strong><br><sub>Particles only · no AI run</sub>
+    </td>
+  </tr>
+</table>
 
-The app guides you through five steps:
+<p align="center"><sub>Click a clip for the full MP4. AI effects made with LTX-2.5; footage from Pexels and Mixkit. All clips, stills and GIFs are in the <a href="https://github.com/Zitroffi/comfyui-element-forge/releases/tag/examples">examples release</a>.</sub></p>
+
+<br>
+
+## How it works
+
+Five steps in the app. Choose from fire, lightning, sparks, smoke, magic, weather, debris, liquid and dissolve styles, or describe your own effect; experimental styles are marked before you generate.
 
 <table>
   <tr>
     <td width="33%" valign="top">
       <h3>1 · Clip</h3>
-      <p>Load a <b>video or a picture</b>. <b>Depth, normals and camera motion</b> are worked out once per clip.</p><br>
+      <p>Load a <b>video or a picture</b>. <b>Depth, surface normals and camera motion</b> are worked out once per clip.</p>
     </td>
     <td width="33%" valign="top">
       <h3>2 · Position & Track</h3>
-      <p>Click where the effect belongs. It follows a <b>point, an object or the camera</b>, and <b>hides behind the object</b> with its mask.</p><br>
+      <p>Click where the effect belongs. It follows a <b>point, an object or the camera</b> and can <b>hide behind the object</b>.</p>
     </td>
     <td width="33%" valign="top">
-      <h3>3 · Effect · Basic</h3>
-      <p>Choose one of <b>26 styles</b> or <b>describe your own</b>. <b>LTX-2.5</b> generates it on your clip; drawn styles need no AI.</p><br>
+      <h3>3 · Effect</h3>
+      <p><b>Basic:</b> one of <b>25 styles</b> or your own words, generated by LTX-2.5.<br><b>Advanced:</b> build the particles <b>live, without AI</b>.</p>
     </td>
   </tr>
   <tr>
     <td width="33%" valign="top">
-      <h3>3 · Effect · Advanced</h3>
-      <p>Build particle simulations <b>live, without AI</b>. Depth, masks and tracks let them <b>hide, collide and move with the scene</b>.</p><br>
-    </td>
-    <td width="33%" valign="top">
       <h3>4 · Scene & finish</h3>
-      <p>Change light, glow, colour and placement <b>live, without a new run</b>. Combine <b>several effects</b> on one clip.</p><br>
+      <p>Light, glow, colour and placement <b>live, without a new run</b>. Combine <b>several effects</b> on one clip.</p>
     </td>
     <td width="33%" valign="top">
       <h3>5 · Output</h3>
-      <p>Compare versions and export video or <b>scene-linear EXR passes</b>, with <b>NVIDIA × 2 or HDR</b>, even for the clip alone.</p><br>
+      <p>Compare versions and export video or <b>EXR passes</b> for compositing, with <b>NVIDIA × 2 or HDR</b>.</p>
+    </td>
+    <td width="33%" valign="top">
+      <h3>Node graph</h3>
+      <p>The <b>Element Forge</b> template runs the same graphs as ordinary ComfyUI nodes.</p>
     </td>
   </tr>
 </table>
@@ -120,11 +140,11 @@ The app guides you through five steps:
 </details>
 
 <details>
-<summary><b>3 · Effect · Basic</b> &nbsp;·&nbsp; 26 styles, your words, overlay or inpaint</summary>
+<summary><b>3 · Effect · Basic</b> &nbsp;·&nbsp; 25 styles, your words, overlay or inpaint</summary>
 <br>
 
-- **Styles**<br>26 styles in ten groups, from flames and lightning to snow, liquid and dissolve, plus your own effect.
-- **Words**<br>Describe the look, motion and contact. **Enhance** can refine them when a language model is installed. With the optional Bonsai model, **Describe what you want** suggests a style and its words; you see each change before you apply it. For particle styles, **Particles in your words** turns a sentence such as *slow green sparks that spiral up* into emitter values.
+- **Styles**<br>25 styles in nine groups, from flames and lightning to snow, liquid and dissolve, plus your own effect.
+- **Words**<br>Describe the look, motion and contact. **Enhance** can refine them when a language model is installed. With the optional Bonsai model (a small local vision-language model, see [setup](docs/setup.md#bonsai-2)), **Describe what you want** suggests a style and its words; you see each change before you apply it. For particle styles, **Particles in your words** turns a sentence such as *slow green sparks that spiral up* into emitter values.
 - **From a picture**<br>Add up to three pictures of an effect you like. Bonsai sees them beside your clip with the chosen place marked, proposes the style and its words for that spot, and then sets the particles to match the pictures.
 - **Three routes**<br>**Overlay** generates the element separately. **Inpaint** generates it inside the footage for contact with surfaces. **Particles only** draws any style with its particles, without AI generation.
 - **Several effects**<br>**＋ Effect** adds another effect to the same clip, each with its own settings and versions.
@@ -163,7 +183,7 @@ The app guides you through five steps:
 - **Preview and final**<br>Start with a fast **Preview**, then **Make final** for the full-size version. **Add passes** creates missing passes without generating the effect again.
 - **Versions**<br>Every run becomes a version. Show and compare versions and restore their settings.
 - **Formats**<br>Export the composite as MP4, ProRes, H.265 10-bit, PNG or EXR.
-- **Passes**<br>Export separate scene-linear EXR passes for your compositor: effect passes, plate, depth, normals and the object's mask, each on its own.
+- **Passes**<br>Export separate scene-linear EXR passes (linear light, for Nuke, After Effects or Resolve): effect passes, plate, depth, normals and the object's mask, each on its own.
 - **The clip alone**<br>Export a clip without an effect, with its passes, NVIDIA upscaling or HDR.
 - **Upscaling and HDR**<br>**LTX × 2** adds detail in a second pass; **NVIDIA × 2** is fast. In the export, NVIDIA upscaling and HDR run on the plate only, with the effects kept as they are, or on the finished comp.
 - **Element library**<br>Save an AI element to a library and place it in other shots without generating it again.
@@ -226,8 +246,6 @@ Start with a short clip and an overlay effect.
 6. **Output**<br>Export a finished video or image sequence, with separate EXR passes when needed.
 
 > [!TIP]
-> **Versions**<br>The app keeps versions so you can compare results and restore their settings. For supported previews, **Make final** creates a full-size version; **Add passes** provides missing layers without another effect generation.
->
 > **Prefer a node graph?**<br>Open the **Element Forge** template instead. It uses the same underlying graphs as the app. See [the workflow guide](docs/usage.md#use-the-workflow).
 
 <br>
@@ -235,7 +253,7 @@ Start with a short clip and an overlay effect.
 ## Make your own effects
 
 1. **Describe it**<br>Choose **Your own effect** and describe any element in words. It is generated with LTX-2.5 and stays on the point you click. Things that glow work best.
-2. **Shape it with particles**<br>Switch the app to **Advanced**. In **Effect**, the **Emitter** shows the same controls for every style; a preset only sets their values. Changed values are highlighted and can be reset one by one. **✦ Fill from the prompt** sets them from your words with the optional Bonsai model. The **live preview** simulates the particles on your clip with the same engine and seed as the run. It needs no AI, and the particles already react to the scene: they hide behind nearer objects, collide with surfaces and move with the clip.
+2. **Shape it with particles**<br>Switch the app to **Advanced**. The **Emitter** has the same controls for every style, and the **live preview** shows the particles on your clip with the same engine and seed as the run, without AI. **✦ Fill from the prompt** can set them from your words.
 3. **Keep it**<br>**Save as my effect** stores the style, its words, the emitter values and the switches. Clip, position and track stay with the shot. Your saved effects appear under **My effects** for every clip, ready to load, rename or delete.
 
 ### Particles in detail
@@ -299,31 +317,6 @@ In a node graph, connect **EF Particles** to EF Element for the same settings. S
 
 <br>
 
-## More examples
-
-The effects below are AI-generated with LTX-2.5, except the fireflies, which are drawn particles. Footage comes from Pexels and Mixkit.
-
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <img src="docs/assets/examples/orb.gif" alt="Energy around a moving ball" width="160"><br><strong>Energy around a moving ball</strong><br><a href="https://github.com/Zitroffi/comfyui-element-forge/releases/download/examples/orb.mp4">Download MP4</a>
-    </td>
-    <td align="center" width="50%">
-      <img src="docs/assets/examples/rose-flame.gif" alt="Flame following a rose" width="160"><br><strong>Flame following a rose</strong><br><a href="https://github.com/Zitroffi/comfyui-element-forge/releases/download/examples/rose-flame.mp4">Download MP4</a>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="docs/assets/examples/dress-sparks.gif" alt="Sparks from a spinning dress" width="160"><br><strong>Sparks from a spinning dress</strong><br><a href="https://github.com/Zitroffi/comfyui-element-forge/releases/download/examples/dress-sparks.mp4">Download MP4</a>
-    </td>
-    <td align="center" width="50%">
-      <img src="docs/assets/examples/fireflies.gif" alt="Fireflies over a lake" width="160"><br><strong>Fireflies over a lake</strong><br><a href="https://github.com/Zitroffi/comfyui-element-forge/releases/download/examples/fireflies.mp4">Download MP4</a>
-    </td>
-  </tr>
-</table>
-
-All clips, stills and GIFs are available in the [examples release](https://github.com/Zitroffi/comfyui-element-forge/releases/tag/examples).
-
 <br>
 
 ## Documentation
@@ -331,6 +324,7 @@ All clips, stills and GIFs are available in the [examples release](https://githu
 - **[Setup and troubleshooting](docs/setup.md)**<br>Dependencies, models and optional additions.
 - **[Usage guide](docs/usage.md)**<br>Tracking, masks, generation modes, versions, export and reusable elements.
 - **[Node reference](docs/nodes.md)**<br>Extend the supplied workflow or build your own.
+- **[Particle depth and mask tools](docs/particle-depth.md)**<br>Guide LTX with particle depth, pick the part of an object that emits and keep its contour.
 - **[Report an issue](https://github.com/Zitroffi/comfyui-element-forge/issues)**<br>Include the error and steps to reproduce it.
 
 ## License

@@ -32,6 +32,10 @@ export const ADV = {
   sharper_2x: "LTX upscale x2 (latent upscaler + second pass, test)",
 };
 export const ADV_SCENE = "Sticks to scene (off = object)";
+export const ADV_PLACEMENT = "Placement (auto / point / area / object / frame / between)";
+export const ADV_SIDE = "Emitter side";
+export const ADV_CRUMBLE = ["Object crumbles under the effect (the dissolve is the plate)", "Dissolve style (plain / fire (LTX) / gold dust)",
+  "Dissolve direction (0 up, 90 right)"];
 export const ADV_MASK = "Track follows the object mask (hands, bodies)";
 export const ADV_STILL = "Fixed on screen (Follows: Screen)";
 export const FOLLOWS = { point: [false, false, false], object: [false, true, false], mask: [false, true, false], scene: [true, false, false],
@@ -66,6 +70,13 @@ export function buildContext(fx, clipName) {
   if (fol) [adv[ADV_SCENE], adv[ADV_MASK], adv[ADV_STILL]] = fol;
   for (const [w, name] of Object.entries(ADV)) if (fx[w] !== undefined) adv[name] = !!fx[w];
   if (fx.guide && fx.guide !== "style default") adv[ADV_AI_GUIDE] = fx.guide;
+  if (fx.placement && fx.placement !== "style default") adv[ADV_PLACEMENT] = String(fx.placement);
+  if (fx.sits_on && fx.sits_on !== "style default") adv[ADV_SIDE] = String(fx.sits_on);
+  if (fx.crumble === true) {
+    adv[ADV_CRUMBLE[0]] = true;
+    if (fx.crumble_look && fx.crumble_look !== "plain") adv[ADV_CRUMBLE[1]] = String(fx.crumble_look);
+    if (Number.isFinite(+fx.crumble_direction) && Math.round(+fx.crumble_direction) !== 90) adv[ADV_CRUMBLE[2]] = Math.round(+fx.crumble_direction);
+  }
   else if (fx.draw_path) adv[ADV_AI_GUIDE] = "drawn path";
   if (adv[ADV_AI_GUIDE] === "drawn path") adv[ADV_GUIDE] = "draw";
   const how = { overlay: false, inpaint: true, "layer on black": false, "painted into the clip": true }[fx.how_it_goes_in];

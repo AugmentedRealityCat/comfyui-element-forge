@@ -35,8 +35,10 @@ export const usesGuide = (st, effect) => {
   const g = guideOf(st, effect);
   return g === "drawn path" || g === "object shape" || (g === "particles" && !!withAdv(st, effect).Particles);
 };
-export const inWindow = (st, effect) => st?.placement === "point"
-  && (usesGuide(st, effect) || !!withAdv(st, effect).Particles || !!withAdv(st, effect)["Follows motion"]);
+export const inWindow = (st, effect) => {
+  const a = withAdv(st, effect), led = usesGuide(st, effect) || !!a["Follows motion"];
+  return st?.placement === "point" ? led || !!a.Particles : st?.placement === "ab" && !a.Particles && led;
+};
 export function basePoint(st, b) {
   const side = st?.settings?.["Emitter side"] || "bottom";
   return { x: side === "left" ? b.x : side === "right" ? b.x + b.w : b.x + b.w / 2,

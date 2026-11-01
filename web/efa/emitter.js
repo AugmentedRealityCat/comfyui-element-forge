@@ -235,6 +235,7 @@ const setOwn = (ctx, k, v) => { const o = { ...ctx.own }; if (v === undefined) d
 function setEffect(fn, reason) {
   S.change((sh) => { const x = sh.effects.find((y) => y.id === sh.active); if (x) fn(x); }, reason);
 }
+const setAdvAll = (name, v) => setAdv(name, v);
 export function setAdv(name, v) {
   setEffect((x) => { x.adv = { ...x.adv }; if (v === undefined) delete x.adv[name]; else x.adv[name] = v; }, "emitter");
 }
@@ -541,6 +542,13 @@ function crumbleGroup(ctx) {
   const { e, ui } = ctx;
   if (ctx.kind === "dissolve") return [];
   const on = !!e.adv?.[CRUMBLE];
+  const setAdv = (k, v) => {
+    if (ctx.f?.crumble) {
+      setEffect((x) => { if (x.fromNode) { x.fromNode = { ...x.fromNode }; for (const c of CRUMBLE_KEYS) delete x.fromNode[c]; } }, "crumble");
+      ctx.api.setFx("crumble", false);
+    }
+    setAdvAll(k, v);
+  };
   const head = ui.toggle("The object crumbles", on, (v) => setAdv(CRUMBLE, v || undefined),
     "The clicked object falls apart into particles under the effect, and the scene behind it appears");
   if (!on) return [box(ctx, "crumble", "Crumble", [head, h("p", { class: "muted small" }, "The object stays whole.")], [], "", "off")];

@@ -60,13 +60,20 @@ def resolve_effect(prompt, value):
         return None
     inputs = src.get("inputs") or {}
     out = {}
-    for name in N.EFAppEffect.INPUT_TYPES()["required"]:
+    types = N.EFAppEffect.INPUT_TYPES()
+    for name in types["required"]:
         if name not in inputs:
             return None
         v = _unwrap(inputs[name])
         if is_link(v):
             return None
         out[name] = v
+    for name in types.get("optional", {}):
+        if name in inputs:
+            v = _unwrap(inputs[name])
+            if is_link(v):
+                return None
+            out[name] = v
     return out
 
 

@@ -45,6 +45,8 @@ check(pl.choose("frame", False, True) == (True, False), "the whole frame: a wind
 check(pl.choose("between", False, True) == (False, True), "between stretches from A to B")
 check(pl.choose("between", False, False) == (False, False), "between without B is a point")
 check(pl.choose("point", True, True) == (True, False), "a point with a guide is made in its window, B does not stretch it")
+check(pl.choose("between", True, True) == (True, False) and pl.choose("auto", True, True) == (True, False),
+      "between with a guide: made in its window, B does not stretch it (night probe 01.11.)")
 try:
     pl.choose("somewhere", False, False)
     check(False, "an unknown placement stops")
@@ -90,6 +92,15 @@ st = cv.style_def(presets, "fire", "flame")
 moved = cv.with_place(st, {"adv": {cv.PLACEMENT: "frame"}})
 check(moved["placement"] == "frame" and moved["settings"].get("Particle emitter") == "whole frame", "the app moves a flame to the whole frame")
 check(cv.with_place(st, {"adv": {}}) is st, "nothing chosen: the style as it is")
+fab = {"kind": "fire", "style": "flame", "where": {"a": {"x": 1000, "y": 525}, "b": {"x": 1350, "y": 230}}, "dir": None, "depth": 0,
+       "strength": "normal", "text": {"what": "", "look": "", "motion": "", "contact": ""}, "prompt": None,
+       "timing": {"start": 0, "end": None}, "seed": 1, "adv": {cv.PLACEMENT: "between"}, "box": None}
+clip0 = {"name": "c.mp4", "width": 1920, "height": 1080, "frames": 90, "fps": 30, "seconds": 3}
+vab = cv.values_for(presets, fab, {"clip": clip0, "night": False, "scene": ""})
+x0 = 1000 - vab["Emitter x in window"] * vab["Window width (plate px)"]
+y0 = 525 - vab["Emitter y in window"] * vab["Window height (plate px)"]
+check(vab["Window A-B automatic"] is False and x0 <= 1000 and x0 + vab["Window width (plate px)"] >= 1350
+      and y0 <= 230 and y0 + vab["Window height (plate px)"] >= 525, "a guided flame between A and B: its window holds A and B")
 
 check(cv.colour_name("#3070ff") == "blue" and cv.colour_name("#ffffff") == "white", "a picked colour has the nearest named colour for the AI")
 check(cv.quick_words({"quick": {"colour": "#e8202a", "amount": "more", "size": "smaller"}}) == "mainly red, dense and abundant, small",
@@ -115,4 +126,19 @@ check(k1 != k0 and AN.track_key({**w0, "fixes": '[{"frame": 40, "add": "100, 200
 G = json.load(open(os.path.join(API, "element_forge.json"), encoding="utf-8"))
 check(G["962"]["class_type"] == "EFMaskFixes" and G["929"]["inputs"]["mask"] == ["962", 1] and G["930"]["inputs"]["mask"] == ["962", 0],
       "EF Mask Fixes sits before both steady masks")
+
+PR = importlib.import_module(pack.__name__ + ".element_forge.app_mode.prompt_rewrite")
+fx0 = {k: (v[1] or {}).get("default", v[0][0] if isinstance(v[0], list) else 0) for k, v in an.EFAppEffect.INPUT_TYPES()["required"].items()}
+fx0.update(effect_style="fire/flame", object_word="sword blade", seed=6)
+p0 = {"901": {"class_type": "EFAppEffect", "inputs": {**fx0, "crumble": True, "placement": "between", "guide": "particles"}}}
+got = PR.resolve_effect(p0, ["901", 0])
+check(got and got["crumble"] is True and got["placement"] == "between" and got["guide"] == "particles",
+      "the rewrite reads the optional widgets (Crumble, Placement, Guide)")
+check(PR.resolve_effect({"901": {"class_type": "EFAppEffect", "inputs": {**fx0}}}, ["901", 0]).get("crumble") is None,
+      "a widget not sent keeps its default")
+check(PR.resolve_effect({"901": {"class_type": "EFAppEffect", "inputs": {**fx0, "crumble": ["5", 0]}}}, ["901", 0]) is None,
+      "an optional widget fed by a link: not known before the run")
+eff = an.EFAppEffect().build(**got)[0]
+st = an.apply_effect({"Point A x": 1, "Point A y": 2}, eff)
+check(st.get(an.CRUMBLE) is True and st.get("Window A-B automatic") is True, "so the run crumbles and stretches from A to B")
 print(f"{ok} checks passed")
