@@ -89,6 +89,18 @@
 .efa-root .field.mask { gap: 6px; }
 .efa-root .field.mask > .label, .efa-root .field.mask > p { margin: 0; }
 .efa-root .field.live > .note { margin-bottom: 6px; }
+.efa-root .em-curve { display: grid; gap: 6px; margin: 4px 0 8px; }
+.efa-root .em-curve-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.efa-root .em-curve-plot { border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--panel-2); }
+.efa-root .em-curve-svg { display: block; width: 100%; height: 76px; touch-action: none; cursor: copy; }
+.efa-root .em-curve-grid { stroke: var(--line); stroke-width: 1; }
+.efa-root .em-curve-area { fill: color-mix(in srgb, var(--accent) 22%, transparent); }
+.efa-root .em-curve-line { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.efa-root .em-curve-dot { fill: var(--panel); stroke: var(--accent); stroke-width: 2; cursor: grab; vector-effect: non-scaling-stroke; }
+.efa-root .em-curve-dot:focus-visible { outline: none; stroke: var(--text); stroke-width: 3; }
+.efa-root .em-curve-axis { display: flex; justify-content: space-between; margin-top: -2px; }
+.efa-root .em-curve.changed { box-shadow: -8px 0 0 -6px var(--accent); }
+.efa-root .em-curve.changed .em-curve-head .em-label { color: var(--text); font-weight: 600; }
 .efa-root .text { width: 100%; height: 32px; padding: 0 10px; border-radius: var(--radius-s); border: 1px solid var(--line-2); background: var(--panel-2); }
 .efa-root .text.area { height: auto; padding: 8px 10px; resize: vertical; line-height: 1.45; }
 .efa-root .text:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }

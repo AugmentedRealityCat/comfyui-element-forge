@@ -20,7 +20,7 @@ export const CRUMBLE_DIR = "Dissolve direction (0 up, 90 right)";
 export const CRUMBLE_VALUES = "Dissolve extra (JSON)";
 const CRUMBLE_KEYS = [CRUMBLE, CRUMBLE_STYLE, CRUMBLE_DIR, CRUMBLE_VALUES];
 const CRUMBLE_STYLES = [["plain", "Crumbles", "Pieces in the object's own colours"], ["gold dust", "Gold dust", "Glowing pieces"],
-  ["fire (LTX)", "Burns away", "Embers painted by the AI"]];
+  ["fire (LTX)", "Burns away", "Embers painted by the AI"], ["explodes", "Explodes", "It bursts from the centre at the start: debris flies out and falls, the object is gone (with Explosion on top: debris and fireball)"]];
 
 export function emitterKind(st) {
   if (!st) return null;
@@ -62,12 +62,14 @@ const DRAWN = new Set(["glow", "trail", "opacity", "shutter", "blob", "blob_chok
 
 const key = (k, label, min, max, step, o = {}) => ({ k, label, min, max, step, ...o });
 const PARTICLES = {
-  source: { main: [key("radius", "Emitter size", 0, 300, 1, { unit: "px", tip: "How far around the point or the line they are born (At 1080 px)" })],
+  source: { main: [key("radius", "Emitter size", 0, 300, 1, { unit: "px", tip: "How far around the point or the line they are born (At 1080 px)" }),
+      key("scale", "Scale", 0.05, 4, 0.05, { tip: "The whole effect smaller or larger: sizes, speeds and forces together. 0.3 = seen from far away" })],
     more: [key("max_particles", "Max. alive at once", 100, 40000, 100, { tip: "More would be dropped (rain over a long clip)" })] },
   emission: {
-    main: [key("rate", "Rate", 0, 2000, 1, { unit: "/s", tip: "Particles per second" }),
+    main: [key("rate", "Rate", 0, 2000, 1, { unit: "/s", tip: "Particles per second (with a curve under Rate over time: at its top)" }),
       key("burst", "Burst", 0, 2000, 1, { unit: "", tip: "Particles at once" })],
-    more: [key("burst_at", "Burst at", 0, 10, 0.05, { unit: "s", tip: "When the burst comes, after the start" })],
+    more: [key("burst_at", "Burst at", 0, 10, 0.05, { unit: "s", tip: "When the burst comes, after the start" }),
+      key("burst_every", "Burst every", 0, 10, 0.05, { unit: "s", tip: "0: once. Else the burst comes again every so many seconds (fireworks, shots, a storm's strikes)" })],
   },
   motion: {
     main: [key("spread", "Spread", 0, 180, 1, { unit: "°", tip: "How far the particles fan out around the direction" }),
@@ -76,6 +78,7 @@ const PARTICLES = {
     more: [key("lift", "Lift", -90, 90, 1, { unit: "°", tip: "Against motion: the spray tilted upwards" }),
       key("spread_falloff", "Bunch to the centre", 0, 1, 0.05, { tip: "0: evenly over the spread, 1: most of them near the direction" }),
       key("speed_end", "Speed at the end", 0, 2, 0.05, { tip: "Times the speed at birth: 0.2 = they come to rest, 1 = as they are" }),
+      key("speed_by_size", "Faster when bigger", 0, 1, 0.05, { tip: "Big particles faster, small ones slower (rain: big drops fall faster); 0 = off" }),
       key("max_speed", "Speed limit", 0, 3000, 5, { unit: "px/s", tip: "No particle gets faster (wind, vortex, attract); 0 = off" })],
   },
   particle: {
@@ -86,6 +89,7 @@ const PARTICLES = {
     more: [key("trail", "Trail", 0, 60, 1, { unit: "frames", int: true }), key("glow", "Glow", 0, 5, 0.05),
       key("flicker", "Flicker", 0, 1, 0.05), key("flicker_hz", "Flicker speed", 0.1, 20, 0.1, { unit: "Hz" }),
       key("flicker_size", "Flicker by size", 0, 2, 0.05, { tip: "Small particles flicker faster, large ones slower (fire)" }),
+      key("flicker_duty", "Flicker as pulse", 0, 1, 0.01, { tip: "0: a soft wave. Above 0 a short flash of this share of each beat (fireflies: 0.1)" }),
       key("fine_share", "Small particles", 0, 1, 0.05, { tip: "Share of a second, smaller class: quick tongues beside the big body (fire)" }),
       key("fine_size", "Small: size", 0.05, 1, 0.05, { tip: "Times the size" }),
       key("fine_speed", "Small: speed", 0.2, 4, 0.05, { tip: "Times the speed" }),
@@ -109,10 +113,15 @@ const PARTICLES = {
       key("drag", "Drag", 0, 10, 0.05, { tip: "Air resistance per second" }),
       key("turbulence", "Turbulence", 0, 1500, 5, { unit: "px/s", tip: "Swirling (curl noise)" }),
       key("turb_scale", "Turbulence size", 10, 800, 5, { unit: "px" })],
-    more: [key("windy", "Wind up/down", -1500, 1500, 5, { unit: "px/s²", tip: "+ = down", k2: "wind", get: (P) => P.wind?.[1] ?? 0,
+    more: [key("scene_height", "Frame height", 0, 200, 0.5, { unit: "m", tip: "How many metres the frame shows from top to bottom: what falls then falls at real speed (a person: 2 m); 0 = the Gravity above" }),
+      key("gravity_end", "Gravity at the end", -3, 3, 0.05, { tip: "Times the gravity at birth: smoke loses its lift (0.3), an ember rises and then falls (-1.3); 1 = as it is" }),
+      key("windy", "Wind up/down", -1500, 1500, 5, { unit: "px/s²", tip: "+ = down", k2: "wind", get: (P) => P.wind?.[1] ?? 0,
         put: (P, v) => [P.wind?.[0] ?? 0, v] }),
       key("turb_speed", "Turbulence change", 0, 3, 0.05),
       key("vortex", "Vortex", -3000, 3000, 10, { tip: "Swirl around the emitter" }),
+      key("roll", "Mushroom roll", 0, 3000, 10, { unit: "px/s²", tip: "The cloud rolls like a mushroom: up in the middle, out at the top, down at the sides (explosions); 0 = off" }),
+      key("sway", "Sway", 0, 200, 1, { unit: "px", tip: "Each particle swings sideways on its own (snowflakes); 0 = off" }),
+      key("sway_hz", "Sway speed", 0.05, 5, 0.05, { unit: "Hz" }),
       key("attract", "Attract to B", 0, 6000, 20, { tip: "Pull towards point B" }),
       key("flock", "Flocking", 0, 1, 0.05, { tip: "Neighbours pull together: streams wander, clump and break into drops" }),
       key("flock_radius", "Flocking: reach", 5, 200, 1, { unit: "px" }),
@@ -128,11 +137,13 @@ const PARTICLES = {
   },
 };
 const PATHS = [["particles", "None", "Only the particles"], ["bolt", "Bolt", "A bolt from A to B (without B it strikes down)"],
+  ["strike", "Strike", "A lightning strike from the sky onto A, at every burst"],
   ["climb", "Climbs", "A charge climbs the thin parts of the object and jumps from its tips"],
   ["crack", "Cracks", "Cracks spread from A over the surface"]];
 const PATH_EXPL = {
   particles: "No path: only the particles. A path is drawn over them, in the same colours.",
   bolt: "From point A to point B; without B it strikes down. Shift-click sets B.",
+  strike: "A strike from the sky onto point A at the burst (Emission: Burst at, Burst every): a faint leader steps down, the return stroke lights the channel, more strokes flicker in the same channel. B, if set, is the cloud's point.",
   climb: "It climbs the thin parts of the object you clicked: needs the object's track (Position).",
   crack: "Cracks spread from point A over the surface; the clip's depth makes nearer ones wider.",
 };
@@ -142,15 +153,28 @@ const PATH = {
   bolt: [key("reroll_frames", "New shape every", 1, 12, 1, { unit: "frames", int: true }),
     key("fine_rough", "Fine jaggedness", 0, 1, 0.01, { tip: "The finest level of the bolt: 0 = smooth in the small" }),
     key("grow_seconds", "Grows in", 0, 3, 0.05, { unit: "s", tip: "0: there at once. Else it grows from A to B in this time" })],
+  strike: [key("strike_leader", "Leader", 0, 0.5, 0.005, { unit: "s", tip: "How long the faint leader steps down before the strike" }),
+    key("strike_strokes", "Strokes", 1, 12, 1, { int: true, tip: "Return strokes in the same channel (the first with the branches)" }),
+    key("strike_gap", "Between strokes", 0.01, 0.3, 0.005, { unit: "s" }),
+    key("strike_decay", "Fades in", 0.005, 0.3, 0.005, { unit: "s", tip: "A stroke's light falls to a third in this time" }),
+    key("strike_hold", "Glows on", 0, 1, 0.01, { unit: "s", tip: "After the last but one stroke the channel glows on this long, with a few flares; 0 = off" }),
+    key("strike_hold_level", "Glow on: brightness", 0, 1, 0.05),
+    key("strike_new_ground", "Second stroke beside", 0, 1, 0.05, { tip: "Chance that the second stroke forks off low and lands beside the first" }),
+    key("strike_streamer", "Streamer from the ground", 0, 200, 1, { unit: "px", tip: "A short spark rising from A to meet the leader; 0 = none (At 1080 px)" }),
+    key("strike_lean", "Lean", 0, 1, 0.01, { tip: "How far the cloud's point lies to the side, share of the height" }),
+    key("strike_spread", "Lands within", 0, 800, 5, { unit: "px", tip: "Each strike lands this far left or right of A at random (At 1080 px)" })],
   climb: [key("climb_seconds", "Climb time", 0.05, 3, 0.05, { unit: "s", tip: "One climb from the base of a thin part to its tip" }),
     key("climb_rough", "Zigzag off the object", 0, 6, 0.05), key("climb_pitch", "Jag spacing", 0, 0.3, 0.005, { tip: "Share of the part's length; 0 = hugs it" }),
     key("climb_zigzag", "Fine zigzag", 0, 20, 0.5, { unit: "px", tip: "Crackles along the object (At 1080 px)" }),
     key("climb_head", "Bright head", 0, 1, 0.05, { tip: "0: glows evenly, 1: dark tail, bright head" }),
     key("climb_short", "Dim short stretches", 0, 600, 5, { unit: "px", tip: "Shorter climbs glow dimmer and fork less (At 1080 px)" }),
     key("fork_depth", "Forks fork again", 1, 4, 1, { int: true })],
-  crack: [key("crack_speed", "Spread speed", 10, 1500, 5, { unit: "px/s" }), key("crack_length", "Length", 20, 3000, 10, { unit: "px" }),
+  crack: [key("crack_speed", "Spread speed", 10, 60000, 5, { unit: "px/s", tip: "Glass cracks at once (50000), soil and stone slowly" }), key("crack_length", "Length", 20, 3000, 10, { unit: "px" }),
     key("crack_branch", "Branching", 0, 1, 0.01), key("crack_turn", "Curl", 0, 1.5, 0.01), key("crack_step", "Step", 1, 30, 0.5, { unit: "px" }),
     key("crack_seeds", "Start points", 1, 20, 1, { int: true }), key("crack_taper", "Wide at the start", 0, 2, 0.05),
+    key("crack_angle", "Branch angle", 0, 1.6, 0.01, { unit: "rad", tip: "Glass 0.47 (27°), ice 1.05 (60°)" }),
+    key("crack_angle_var", "± Branch angle", 0, 0.8, 0.01, { unit: "rad" }),
+    key("crack_pairs", "Branches in pairs", 0, 1, 0.05, { tip: "Chance that a branch comes with one on the other side (frost)" }),
     key("relief", "Grooves", 0, 1, 0.05, { tip: "Lines read as grooves in the surface (dark rim, lit lower lip)" })],
 };
 const DISSOLVE = {
@@ -198,12 +222,14 @@ function depthRows(ctx) {
     !scene && edge > 0 ? numRow(ctx, key("depth_edge", "Edge width", 1, 16, 1, { unit: "px", int: true })) : null,
     P.path && P.path !== "particles" ? h("p", { class: "muted small" }, "The path is drawn over the depth as lines.") : null].filter(Boolean);
 }
-const SPLASH0 = { count: 0, speed: 160, spread: 70, direction: 0, life: 0.25, size: 1.2 };
+const SPLASH0 = { count: 0, speed: 160, spread: 70, direction: 0, life: 0.25, size: 1.2, at_age: 0, chance: 1 };
 const splash = (f, label, min, max, step, o = {}) => key(`splash_${f}`, label, min, max, step, { ...o, k2: "children",
   get: (P) => (P.children?.[f] ?? SPLASH0[f]), put: (P, v) => ({ ...SPLASH0, ...(P.children || {}), [f]: v }) });
 const SPLASH = [splash("count", "Splash: particles", 0, 12, 1, { int: true, tip: "New particles where one hits the scene (Collision); 0 = none" }),
   splash("speed", "Splash: speed", 0, 1500, 5, { unit: "px/s" }), splash("spread", "Splash: spread", 0, 180, 1, { unit: "°" }),
-  splash("life", "Splash: life", 0.05, 3, 0.05, { unit: "s" }), splash("size", "Splash: size", 0.2, 20, 0.1, { unit: "px" })];
+  splash("life", "Splash: life", 0.05, 3, 0.05, { unit: "s" }), splash("size", "Splash: size", 0.2, 20, 0.1, { unit: "px" }),
+  splash("at_age", "Splash: also in mid-air at", 0, 1, 0.05, { tip: "Share of the life: the particle bursts into the splash there, in mid-air (sparks); 0 = only where it hits" }),
+  splash("chance", "Splash: chance in mid-air", 0, 1, 0.05, { tip: "How many of them burst in mid-air" })];
 
 const MODES = [["angle", "Angle", "The direction of the arrow"], ["outward", "Outward", "Away from the object's outline"],
   ["against motion", "Against motion", "Sprayed backwards from the emitter's motion (grinding)"], ["random", "Random", "Every direction"]];
@@ -218,7 +244,7 @@ const EXPL = {
 
 const GUIDES = [["none", "Free"], ["object shape", "Object shape"], ["drawn path", "Drawn path"], ["particles", "Particles"]];
 const GUIDE_PRESETS = ["fire", "embers", "sparks", "grinding sparks", "smoke", "dust burst", "magic dust", "aura", "liquid", "debris",
-  "snow", "rain", "fireflies", "lightning", "cracks", "frost", "lightning climb", "energy A-B"];
+  "snow", "rain", "fireflies", "lightning", "cracks", "frost", "lightning climb", "lightning strike", "energy A-B", "explosion", "explosion side"];
 const GUIDE_EXPL = {
   none: "The AI paints the element freely from the prompt.",
   "object shape": "The AI shapes the element to the object it sits on (a flame wraps round the fist): the object's depth guides it, only near the object. Needs the object: click it in Position.",
@@ -328,6 +354,81 @@ function dialRow(ctx, label, value, dflt, onset, tip) {
     changed ? h("button", { class: "em-reset", title: `Back to the style's direction (${Math.round(dflt ?? 0)}°)`, onclick: () => onset(null) }, "×") : h("span", {}));
 }
 const setDir = (v) => setEffect((x) => { x.dir = v; }, "emitter");
+const EVEN = [[0, 1], [1, 1]];
+const CURVES = [["even", "Even", EVEN], ["explosion", "Explosion", [[0, 1], [0.04, 1], [0.12, 0.2], [0.3, 0]]],
+  ["pulses", "Pulses", [[0, 0], [0.08, 1], [0.2, 0], [0.4, 0], [0.48, 1], [0.6, 0], [0.8, 0], [0.88, 1], [1, 0]]],
+  ["grows", "Grows", [[0, 0], [1, 1]]], ["dies down", "Dies down", [[0, 1], [1, 0]]]];
+const SVGNS = "http://www.w3.org/2000/svg";
+const svg = (tag, attrs = {}) => { const el = document.createElementNS(SVGNS, tag); for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v)); return el; };
+const flat = (c) => !c?.length || c.every(([, v]) => Math.abs(v - 1) < 1e-6);
+function curveRow(ctx) {
+  const P = ctx.P, B = ctx.B;
+  const cur = (P.rate_curve?.length ? P.rate_curve : EVEN).map(([t, v]) => [+t, +v]).sort((a, b) => a[0] - b[0]);
+  const base = B.rate_curve?.length ? B.rate_curve : EVEN;
+  const changed = "rate_curve" in ctx.own && !same(cur, base);
+  const put = (pts) => {
+    const c = pts.map(([t, v]) => [+t.toFixed(3), +v.toFixed(3)]).sort((a, b) => a[0] - b[0]);
+    const plain = flat(c) && c.length <= 2;
+    setOwn(ctx, "rate_curve", same(c, base) || (plain && flat(B.rate_curve)) ? undefined : (plain ? [] : c));
+  };
+  const W = 300, H = 76, PAD = 6;
+  const X = (t) => PAD + t * (W - 2 * PAD), Y = (v) => PAD + (1 - v) * (H - 2 * PAD);
+  const box = svg("svg", { viewBox: `0 0 ${W} ${H}`, class: "em-curve-svg", role: "img", "aria-label": "Rate over time: the share of the rate along the effect's time" });
+  const grid = [0.25, 0.5, 0.75].map((g) => svg("line", { x1: X(g), x2: X(g), y1: PAD, y2: H - PAD, class: "em-curve-grid" }));
+  const area = svg("path", { class: "em-curve-area" }), line = svg("polyline", { class: "em-curve-line" });
+  const pts = cur.map((p) => [...p]);
+  const dots = [];
+  const draw = () => {
+    const xy = [[0, pts[0][1]], ...pts, [1, pts[pts.length - 1][1]]].map(([t, v]) => `${X(t).toFixed(1)},${Y(v).toFixed(1)}`);
+    line.setAttribute("points", xy.join(" "));
+    area.setAttribute("d", `M${X(0)},${H - PAD} L${xy.join(" L")} L${X(1)},${H - PAD} Z`);
+    dots.forEach((d, i) => { d.setAttribute("cx", X(pts[i][0]).toFixed(1)); d.setAttribute("cy", Y(pts[i][1]).toFixed(1)); });
+  };
+  const at = (ev) => {
+    const b = box.getBoundingClientRect();
+    return [Math.min(1, Math.max(0, ((ev.clientX - b.left) / b.width * W - PAD) / (W - 2 * PAD))),
+      Math.min(1, Math.max(0, 1 - ((ev.clientY - b.top) / b.height * H - PAD) / (H - 2 * PAD)))];
+  };
+  pts.forEach((p, i) => {
+    const d = svg("circle", { r: 5, class: "em-curve-dot", tabindex: "0", "aria-label": `Point ${i + 1}: ${Math.round(p[1] * 100)} % at ${Math.round(p[0] * 100)} % of the time` });
+    d.addEventListener("pointerdown", (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      d.setPointerCapture(ev.pointerId);
+      const lo = i === 0 ? 0 : pts[i - 1][0] + 0.001, hi = i === pts.length - 1 ? 1 : pts[i + 1][0] - 0.001;
+      const ends = i === 0 || i === pts.length - 1;
+      const move = (m) => { const [t, v] = at(m); pts[i] = [ends ? pts[i][0] : Math.min(hi, Math.max(lo, t)), v]; draw(); };
+      const up = () => { d.removeEventListener("pointermove", move); d.removeEventListener("pointerup", up); put(pts); };
+      d.addEventListener("pointermove", move);
+      d.addEventListener("pointerup", up);
+    });
+    d.addEventListener("dblclick", (ev) => { ev.stopPropagation(); if (i > 0 && i < pts.length - 1) put(pts.filter((_, j) => j !== i)); });
+    d.addEventListener("keydown", (ev) => {
+      const dv = { ArrowUp: 0.05, ArrowDown: -0.05 }[ev.key];
+      if (dv) { ev.preventDefault(); pts[i] = [pts[i][0], Math.min(1, Math.max(0, pts[i][1] + dv))]; put(pts); }
+      if ((ev.key === "Delete" || ev.key === "Backspace") && i > 0 && i < pts.length - 1) { ev.preventDefault(); put(pts.filter((_, j) => j !== i)); }
+    });
+    dots.push(d);
+  });
+  box.addEventListener("dblclick", (ev) => { const [t] = at(ev); put([...pts, [t, rate_at(pts, t)]]); });
+  box.append(...grid, area, line, ...dots);
+  draw();
+  const t = ctx.e.timing, c = S.getShot().clip, end = t.end ?? c?.seconds;
+  const which = CURVES.find(([, , p]) => same(p, cur) || (flat(p) && flat(cur)))?.[0];
+  return h("div", { class: "em-curve" + (changed ? " changed" : ""), "data-key": "rate_curve" },
+    h("div", { class: "em-curve-head" },
+      h("span", { class: "em-label", title: "How many particles come when: the Rate is the top. Drag a point, double-click the line for a new one, a point to remove it" }, "Rate over time"),
+      changed ? h("button", { class: "em-reset", title: "Back to the style's curve", "aria-label": "Reset Rate over time", onclick: () => setOwn(ctx, "rate_curve", undefined) }, "×") : h("span", {})),
+    h("div", { class: "em-curve-plot" }, box),
+    h("div", { class: "em-curve-axis muted small" }, h("span", {}, fmtSec(t.start || 0)), h("span", {}, end != null ? fmtSec(end) : "end")),
+    ctx.ui.seg("Rate over time", CURVES.map(([k, l]) => [k, l]), which || "", (k) => put(CURVES.find(([x]) => x === k)[2])));
+}
+function rate_at(pts, t) {
+  for (let i = 1; i < pts.length; i++) {
+    const [a, va] = pts[i - 1], [b, vb] = pts[i];
+    if (t <= b) return b - a <= 1e-9 ? vb : va + (vb - va) * (t - a) / (b - a);
+  }
+  return pts[pts.length - 1][1];
+}
 function depthWrap(ctx, cur, base, mine, set) {
   const num = h("input", { class: "text em-num", type: "number", step: "0.01", value: r(cur, 3), "aria-label": "Depth offset", onchange: (ev) => set(+ev.target.value) });
   const range = h("input", { type: "range", min: String(Math.min(-1, cur)), max: String(Math.max(1, cur)), step: "0.01", value: String(cur), "aria-label": "Depth offset",
@@ -587,8 +688,9 @@ function particleGroups(ctx) {
   const sum = {
     source: [aiOff(ctx) ? "particles only" : `guide: ${pname(GUIDES, guideNow(ctx.st0 || st, e)).toLowerCase()}`,
       ctx.f.guide_particles && ctx.f.guide_particles !== "style default" ? ctx.f.guide_particles : startPreset(ctx.st0 || st),
-      shapeName(shapeOf(e, st)), seedText(ctx)],
-    emission: [P.rate > 0 ? `${num_(P.rate * amt, 0)} /s` : null, P.burst > 0 ? `${num_(P.burst * amt, 0)} at once` : null, timeSpan(ctx)],
+      shapeName(shapeOf(e, st)), Math.abs((P.scale ?? 1) - 1) > 1e-6 ? `scale ${num_(P.scale)}` : null, seedText(ctx)],
+    emission: [P.rate > 0 ? `${num_(P.rate * amt, 0)} /s` : null, P.rate > 0 && !flat(P.rate_curve) ? "over a curve" : null,
+      P.burst > 0 ? `${num_(P.burst * amt, 0)} at once` : null, timeSpan(ctx)],
     motion: [pname(MODES, P.direction_mode), `spread ${num_(P.spread, 0)}°`, `speed ${num_(P.speed, 0)} px/s`],
     particle: [P.blend ? pname(BLENDS, P.blend).toLowerCase() : null, `life ${num_(P.life)} s`, `size ${num_(P.size)} px`, P.trail > 0 ? `trail ${num_(P.trail, 0)}` : null],
     merge: [P.blob > 0 ? `blur ${num_(P.blob, 1)} px · choke ${num_(P.blob_choke)}` : "off"],
@@ -607,9 +709,10 @@ function particleGroups(ctx) {
       alsoDrawRow(ctx),
       h("div", { class: "em-row choice" }, h("span", { class: "em-label" }, "Shape"),
         h("span", {}, shapeName(shapeOf(e, st)), " · ", ui.link("change in Position", () => ui.open("position")))),
+      ...rows(ctx, G.source.main),
       ...ctx.extras.seed(),
     ], rows(ctx, G.source.more), "", line("source")),
-    box(ctx, "emission", "Emission", [...rows(ctx, G.emission.main), timing(ctx), ...ctx.extras.preroll()], rows(ctx, G.emission.more), "", line("emission")),
+    box(ctx, "emission", "Emission", [...rows(ctx, G.emission.main), curveRow(ctx), timing(ctx), ...ctx.extras.preroll()], rows(ctx, G.emission.more), "", line("emission")),
     box(ctx, "motion", "Motion", [
       choiceRow(ctx, "direction_mode", "Mode", MODES),
       dialRow(ctx, "Direction", e.dir, B.direction, setDir, dirActs ? "Which way they fly: the canvas arrow"
@@ -646,7 +749,7 @@ function pathGroup(ctx) {
   const sub = (t, list) => [h("div", { class: "label sub" }, t), ...rows(ctx, list)];
   return [box(ctx, "path", "Paths", [choiceRow(ctx, "path", "Path", PATHS, "A path drawn over the particles: bolt, climbing charge or cracks"),
     h("p", { class: "muted small" }, PATH_EXPL[cur] || ""), ...rows(ctx, PATH.main)],
-  [...sub("Bolt", PATH.bolt), ...sub("Climbs", PATH.climb), ...sub("Cracks", PATH.crack)], "",
+  [...sub("Bolt", PATH.bolt), ...sub("Strike", PATH.strike), ...sub("Climbs", PATH.climb), ...sub("Cracks", PATH.crack)], "",
   cur === "particles" ? "none" : `${pname(PATHS, cur).toLowerCase()} · width ${num_(P.width)} px · ${num_(P.branches, 0)} branches`, "path")];
 }
 function aiFollowRows(ctx) {

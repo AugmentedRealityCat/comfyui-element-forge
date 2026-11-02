@@ -213,7 +213,7 @@ After a run, these controls change the result at once, without a new run. A chan
 
 | Control | What it does |
 |:---|:---|
-| **Light on the scene** | Off, Low, Medium or High: the light the effect throws onto the clip. Needs a light pass; with Inpaint the light is already part of the picture. |
+| **Light on the scene** | Off, Low, Medium or High: the light the effect throws onto the clip. It falls off with the distance in the scene: a wall right behind the effect gets more than a background far away (the shot's depth range and field of view are measured from the clip). Needs a light pass; with Inpaint the light is already part of the picture. |
 | **Glow** | Soft glow around the bright parts of the effect. |
 | **Lit by the other effects** | The light of the other effects brightens this one where it falls, e.g. smoke near a flame. Shown with several effects. |
 | **Colour** | Original, a swatch, your own colour, or a colour taken from your clip (E). Tints the effect, its light and its glow. |
@@ -255,8 +255,8 @@ Then **Run**. The result lands in the versions of the effect; see [Versions](#ve
 
 | Effect | Styles |
 |:---|:---|
-| **Fire** | Flame on the object · Short burst · Smoldering ground ⚗ |
-| **Lightning** | Between two points · Climbs an object: fine filaments · Climbs an object: blue arcs ⚗ · Climbs an object: particles only *(no AI)* |
+| **Fire** | Flame on the object · Short burst · Explosion · Explosion: particles only *(no AI)* · Smoldering ground ⚗ |
+| **Lightning** | Between two points · Strike from the sky ⚗ · Strike: particles only *(no AI)* · Climbs an object: fine filaments · Climbs an object: blue arcs ⚗ · Climbs an object: particles only *(no AI)* |
 | **Sparks** | From a moving object ⚗ · Burst from a point |
 | **Smoke** | Rises from a point · Rises from a point: particles only *(no AI)* |
 | **Magic & energy** | Aura around a figure · Aura: particles only *(no AI)* · Energy between two points ⚗ · Energy ball |
@@ -321,7 +321,7 @@ Element Forge has its own particle engine. It uses the clip's analysis, so parti
 | Stage | What happens |
 |:---|:---|
 | **Emitter** | Particles start at a point, between two points, along a drawn path, in an area, across the whole frame, on an object, along its outline or bottom edge, or in groups placed in depth. |
-| **Birth** | Each particle gets a life, size, speed and direction: at an angle, outward from the object, against the emitter's motion (grinding sparks) or random. Rate and bursts decide when they appear. |
+| **Birth** | Each particle gets a life, size, speed and direction: at an angle, outward from the object, against the emitter's motion (grinding sparks) or random. Rate and bursts decide when they appear; **Rate over time** shapes the rate along the effect's time. |
 | **Forces** | Every step applies gravity, wind, drag, swirling turbulence (curl noise), a vortex around the emitter, attraction to point B and flocking, where neighbours pull together into streams and drops. |
 | **Motion from the clip** | Particles take on part of the emitter's movement. Optical flow of the footage lets moving things carry them along, such as a hand sweeping through smoke. The measured camera motion keeps them in place in the scene while the camera moves. |
 | **Depth and contact** | Each particle has a depth in the scene. Nearer objects hide it, and where it meets a surface it can bounce, stick, slide or die. Rain and liquid drops splash on impact. |
@@ -342,6 +342,7 @@ Tested with the same graphs. In the workflow, these are the settings of **EF Gui
 | Preset | Works best with | Notes |
 |:---|:---|:---|
 | **sparks** | Guide (lines) | Long sparks flying off a skate wheel or a hand; as start video only a short burst. |
+| **lightning strike** | Guide, a tall window with A near its bottom | A strike from the sky onto A at the burst: a faint leader, the flash with its branches, two more flickers in the same channel; about a third of a second. **Burst every** makes a storm, *Lands within* spreads the strikes. |
 | **lightning, energy A-B** | Guide, window between A and B | Give the window room around both points (e.g. 800×1200), else the bolt is cut at its edge. |
 | **lightning climb** | Guide, or particles only | The charge crawls along the object and jumps from its tips. With LTX, describe **hair-thin filaments**; "lightning arcs" made LTX paint a wide, clipped plasma tube. On a bright plate the filaments almost vanish; there use particles only or the arcs style. |
 | **magic dust, line A-B** | Guide | A dense glowing band between two hands; lower the amount for a finer band. |
@@ -356,6 +357,7 @@ Tested with the same graphs. In the workflow, these are the settings of **EF Gui
 | **fire (on a hand)** | – | The guide gives glowing embers, not flames; use the flame element. |
 | **frost** | Guide, Inpaint | Sharp pale blue crystal clusters over the object. Prompt *crystals grow along thin branching lines, the stone between them stays clearly visible*; "the whole statue frozen" lays a grey glassy veil over it. |
 | **cracks** | Particles only, on a hard surface | Dark grooves with a lit lower edge that stay on the surface and hide behind what moves in front. With LTX they come out as painted glowing lines; on soft ground they read as twigs. |
+| **explosion** | Start video + Guide (temperature), a window around the point | A white-hot fireball that grows from the point for about half a second and breaks up into embers; the rate curve fires nearly everything at once. On the overlay (add) dark smoke does not show. |
 | **debris** | Guide | Chips and a dust cloud burst up where a skate hits the ground. Describe a dull, dusty, matte material in daylight; hot colour words made LTX paint glowing embers. Without LTX the chunks take the colour of the ground. |
 | **own sprite** | Start video | A custom sprite acts only in the start video. |
 
@@ -372,21 +374,46 @@ Shown in **Effect** in Advanced mode. Values left alone keep the style's tested 
 
 | Group | Controls |
 |:---|:---|
-| **Source** | Guide for the AI and how the particles are drawn for it (lines, volume, heat, depth), the particles it starts from, emitter shape and size, maximum particles alive at once |
-| **Emission** | Rate, burst and when it comes, timing, pre-roll |
-| **Motion** | Direction mode (angle, outward, against motion, random) and direction, spread, speed and its variation, lift; how far the particles follow the emitter (strength, lag) and how much the clip carries them; bunch to the centre of the spread, speed at the end of the life, speed limit |
-| **Particle** | Life, size and their variation, size at birth and at the end, colour over life and its variation, sprite, trail, glow, flicker (speed, by size), small particles (share, size, speed, life), fade in and out, motion blur, opacity, spin |
+| **Source** | Guide for the AI and how the particles are drawn for it (lines, volume, heat, depth), the particles it starts from, emitter shape and size, **Scale** of the whole effect, maximum particles alive at once |
+| **Emission** | Rate, burst and when it comes (**Burst every**: again and again), **rate over time**, timing, pre-roll |
+| **Motion** | Direction mode (angle, outward, against motion, random) and direction, spread, speed and its variation (**Faster when bigger**), lift; how far the particles follow the emitter (strength, lag) and how much the clip carries them; bunch to the centre of the spread, speed at the end of the life, speed limit |
+| **Particle** | Life, size and their variation, size at birth and at the end, colour over life and its variation, sprite, trail, glow, flicker (speed, by size, **as pulse**), small particles (share, size, speed, life), fade in and out, motion blur, opacity, spin |
 | **Merge** | Merge into one body: blur, choke, edge, fill, only while young |
-| **Forces** | Gravity, wind (sideways, up and down), drag, turbulence (size, change, fades in, calmed by drag), vortex, attraction to B, flocking (reach, pull) |
+| **Forces** | Gravity, **gravity at the end**, **frame height** (real gravity), wind (sideways, up and down), drag, **mushroom roll**, **sway**, turbulence (size, change, fades in, calmed by drag), vortex, attraction to B, flocking (reach, pull) |
 | **Contact & depth** | Collision (none, bounce, stick, slide, die), bounce, friction, lying time of sticking particles, depth offset and spread, hidden by the scene |
 
 **Calm particles**: lower the speed, set **Speed at the end** below 1 so they come to rest, a **Speed limit**, **Spin** 0, and **Drag calms turbulence** or **Turbulence fades in** so the swirl does not take over. For AI styles (fire, orb, your own effect) the speed is set by the AI; set the guide to **Particles** to get the emitter's speed.
 
 **Drawn for the AI as: Depth** gives the AI the clip's depth of the clicked object, with the particles' surfaces wherever they are in front of it: one guide from the same simulation. **Depth shows** picks the object or the whole scene (the AI may then redraw the background); **Object as** the whole object or only a thin **Inner edge** (width in pixels), so the AI follows the outline and builds less of a body. It needs the object's track; a bolt, a climb or cracks are drawn over it as lines.
 
+**Rate over time** (Emission) is a curve over the effect's time, from its start to its end (or the clip's end): how many particles come when, the Rate is its top. Drag a point; double-click the line for a new one and a point to remove it; arrow keys move a selected point up or down. *Even*, *Explosion* (nearly everything at once, then it trails off), *Pulses* (three waves), *Grows* and *Dies down* are ready-made shapes, × goes back to the style's curve. It works for every particle style, and the node **EF Particle Settings** offers the same shapes as *rate_over_time* (own points in *extra*: `{"rate_curve": [[0, 1], [0.1, 1], [0.3, 0]]}`, time and share of the rate from 0 to 1).
+
+**Physics** (all off by default, for every style). The presets use them where the real effect behaves that way:
+- **Frame height** (m from top to bottom of the frame): what falls, falls at the real 9.81 m/s² for that scale. 0 = the
+  slider's gravity as before.
+- **Gravity at the end**: the share of gravity at the end of the life. Embers rise while hot and tip into falling (−1); an
+  explosion's lift dies down as it cools (0.3).
+- **Faster when bigger**: big drops fall faster than small ones (rain).
+- **Mushroom roll**: two vortices beside the centre turn the rising fireball into a mushroom cap.
+- **Sway** and **Sway speed**: snowflakes drift side to side.
+- **Flicker as pulse**: on for this share of the cycle, dark in between (fireflies).
+- **Splash: also in mid-air at** and **chance**: sparks burst into smaller ones while flying, not only on contact.
+- **Cracks: Branch angle**, **± Branch angle**, **Branches in pairs** (ice grows in pairs of branches at about 60°).
+- **Strike: Glows on** (continuing current after the strokes), **Second stroke beside** (a new ground point),
+  **Streamer from the ground** (a short spark rises from A to meet the leader).
+
+**Scale** (Source) makes the whole effect smaller or larger in one value: sizes, speeds, forces, the emitter and the paths
+together, the time stays. 0.3 = an explosion seen from far away. For one **from the side**, out of an object, pick
+*explosion side* as the particles it starts from (a 45° cone instead of all round) and turn **Direction** (Motion, or D in the
+canvas) to where it bursts out.
+
+**Paths → Strike** draws a lightning strike at every burst (Emission: *Burst at*, *Burst every*), with any preset: a faint, branched leader steps down from the sky in *Leader* seconds, the return stroke lights the whole channel at the burst's moment, then *Strokes* more flashes run down the same channel without the branches, *Between strokes* apart, each fading in *Fades in*. The particles of the same burst go off at the same moment, for sparks or dust where it hits. B, if set, is the cloud's point.
+
 Lightning paths have their own look (width, glow, jaggedness, branches, new shape every few frames); Dissolve has its own emission, motion, particle and force controls.
 
-**Crumble** (every style except Dissolve): turn on **The object crumbles** and the clicked object falls apart into particles under the effect while the scene behind it appears, for example a statue that burns away while the flames rise. **Look** is *Crumbles* (the object's own colours), *Gold dust* or *Burns away* (embers painted by the AI); **Direction** is the way the pieces fly; **Background** fills the place behind it. The pieces keep values of their own (emission, motion, particle, forces) under **More**, so the falling stone and the rising flames do not share one gravity. The crumbling runs over the effect's time in the timeline. It is the clip under the effect, so it shows when this effect is the first in the list; the live preview shows the effect's particles, the crumbling shows after the run.
+**Crumble** (every style except Dissolve): turn on **The object crumbles** and the clicked object falls apart into particles under the effect while the scene behind it appears, for example a statue that burns away while the flames rise. **Look** is *Crumbles* (the object's own colours), *Gold dust*, *Burns away* (embers painted by the AI) or *Explodes* (it
+bursts from its centre within about a tenth of a second, the debris flies out and falls, the object is gone; with the
+*Explosion* effect on top debris and fireball come in one run); **Direction** is the way the pieces fly; **Background** fills the place behind it. The pieces keep values of their own (emission, motion, particle, forces) under **More**, so the falling stone and the rising flames do not share one gravity. The crumbling runs over the effect's time in the timeline. It is the clip under the effect, so it shows when this effect is the first in the list; the live preview shows the effect's particles, the crumbling shows after the run.
 
 <sub>[↑ Contents](#contents)</sub>
 
@@ -504,8 +531,12 @@ Open **Element Forge** from the same template list, or drag [Element Forge.json]
 |:---|:---|:---|
 | `fire/flame` | Fire · Flame on the object | AI |
 | `fire/burst` | Fire · Short burst | AI |
+| `fire/explosion` | Fire · Explosion | AI |
+| `fire/explosion_drawn` | Fire · Explosion: particles only | no AI |
 | `fire/smolder` | Fire · Smoldering ground | AI ⚗ |
 | `lightning/between` | Lightning · Between two points | AI |
+| `lightning/strike` | Lightning · Strike from the sky | AI ⚗ |
+| `lightning/strike_drawn` | Lightning · Strike: particles only | no AI |
 | `lightning/climb` | Lightning · Climbs an object: fine filaments | AI |
 | `lightning/climb_arcs` | Lightning · Climbs an object: blue arcs | AI ⚗ |
 | `lightning/climb_drawn` | Lightning · Climbs an object: particles only | no AI |

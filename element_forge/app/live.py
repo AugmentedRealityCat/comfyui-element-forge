@@ -41,7 +41,7 @@ LOOK = {"colors", "color_var", "glow", "trail", "blob", "blob_choke", "blob_soft
         "sprite_occlude", "sprite_play", "shutter", "depth_guide", "depth_edge"}
 LOOK_SENT = ("colors", "color_var", "glow", "sprite", "trail", "blob", "blob_choke", "blob_soft", "blob_fill", "blob_life", "opacity",
              "plate_color", "shutter", "blend", "look")
-PANEL = ("rate", "burst", "burst_at", "max_particles", "life", "life_var", "size", "size_var", "size_start", "size_end", "speed",
+PANEL = ("rate", "rate_curve", "burst", "burst_at", "burst_every", "max_particles", "life", "life_var", "size", "size_var", "size_start", "size_end", "speed",
          "speed_var", "spread", "direction", "direction_mode", "lift", "inherit", "motion_carry", "gravity", "wind", "drag",
          "turbulence", "turb_scale", "turb_speed", "vortex", "attract", "flock", "collide", "restitution", "friction",
          "depth_offset", "depth_spread", "fade_in", "fade_out", "opacity", "flicker", "flicker_hz", "flicker_size", "fine_share",
@@ -49,9 +49,11 @@ PANEL = ("rate", "burst", "burst_at", "max_particles", "life", "life_var", "size
          "shutter", "colors", "blob", "blob_choke", "blob_soft", "blob_fill", "blob_life", "path", "roughness", "branches", "width",
          "reroll_frames", "preroll", "radius", "spread_falloff", "speed_end", "max_speed", "color_var", "spin", "flock_radius",
          "flock_cohesion", "turb_fade", "turb_drag", "land_fade",
-         "grow_seconds", "fine_rough", "climb_seconds", "climb_pitch", "climb_rough", "climb_head", "climb_short", "fork_depth",
+         "grow_seconds", "fine_rough", "strike_leader", "strike_strokes", "strike_gap", "strike_decay", "strike_hold",
+         "strike_hold_level", "strike_new_ground", "strike_streamer", "strike_lean", "strike_spread", "climb_seconds", "climb_pitch", "climb_rough", "climb_head", "climb_short", "fork_depth",
          "climb_zigzag", "crack_speed", "crack_length", "crack_branch", "crack_turn", "crack_step", "crack_seeds", "crack_taper",
-         "relief",
+         "crack_angle", "crack_angle_var", "crack_pairs", "relief",
+         "scale", "scene_height", "gravity_end", "speed_by_size", "sway", "sway_hz", "flicker_duty", "roll",
          "blend", "plate_color", "ambient", "guide_style", "children",
          "depth_guide", "depth_edge")
 DPANEL = ("density", "push", "lift", "spread", "inherit", "motion_carry", "gravity", "drag", "turbulence", "turb_scale", "life",

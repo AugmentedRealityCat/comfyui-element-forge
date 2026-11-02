@@ -105,7 +105,7 @@ inside = all(o_f[i, 0] < p[0] < o_f[i, 0] + side and o_f[i, 1] < p[1] < o_f[i, 1
 check(inside and side > 2 * 160, f"track roi: fit_ab sizes the window from A and B ({side:.0f} px), both points inside in every frame")
 aura_on = EFParticles().run(plate, "aura", "object contour", mask=m, depth=depth, **args)
 aura_up = EFParticles().run(plate, "aura", "object contour", mask=m, depth=depth, depth_offset=0.15, **args)
-md_up = EFParticles().run(plate, "magic dust", "object contour", mask=m, depth=depth, **args)
+md_up = EFParticles().run(plate, "magic dust", "object contour", mask=m, depth=depth, settings={"flicker": 0.0}, **args)
 check("aura" in aura_on[11] and float(aura_on[8].sum()) < float(aura_up[8].sum())
       and abs(float(aura_up[8].sum()) - float(md_up[8].sum())) < 1e-3 * max(1.0, float(md_up[8].sum())),
       "particles: aura preset sits behind (-0.15), the node offset is added (aura +0.15 = magic dust)")

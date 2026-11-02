@@ -105,6 +105,86 @@
      "guide_particles": "fire"
     },
     {
+     "id": "explosion",
+     "name": "Explosion",
+     "text": "A fireball bursts out from the point you click, guided by the explosion's particles. Shape how much comes when with Rate over time in Advanced.",
+     "cost": "gen",
+     "variant": "app",
+     "placement": "window",
+     "ref": "issue1-explosion",
+     "settings": {
+      "Particles": true,
+      "Particle preset": "explosion",
+      "Particles: start video (seed)": true
+     },
+     "gen": [
+      640,
+      512
+     ],
+     "win": [
+      0.8,
+      0.64
+     ],
+     "emitter": [
+      0.5,
+      0.62
+     ],
+     "prompt": {
+      "preset": "A violent fireball explosion bursts outward from one point: a white-hot flash, rolling orange flames and thick dark smoke billowing out in all directions, glowing debris sparks flying away. Filmed on a pure black background, live-action, realistic, high detail.",
+      "what": "A violent fireball explosion",
+      "what_plain": "An explosion",
+      "look": "a white-hot flash, rolling orange flames and thick dark smoke",
+      "motion": "bursts outward from one point in all directions",
+      "contact": "glowing debris sparks fly away",
+      "chips": {
+       "look": [
+        "a white-hot flash, rolling orange flames and thick dark smoke",
+        "a bright orange fireball with little smoke",
+        "a dark, smoky blast with red fire inside"
+       ],
+       "motion": [
+        "bursts outward from one point in all directions",
+        "blasts upward in a mushroom of fire",
+        "rolls out sideways along the ground"
+       ],
+       "contact": [
+        "glowing debris sparks fly away",
+        "a ring of dust rushes out along the ground",
+        "black smoke stays behind"
+       ]
+      }
+     },
+     "prompt_tested": true
+    },
+    {
+     "id": "explosion_drawn",
+     "name": "Explosion: particles only",
+     "text": "The same made by the particles alone, without an AI run: a blast of fire that brakes, rises and turns to smoke.",
+     "cost": "calc",
+     "variant": "app",
+     "placement": "window",
+     "ref": "issue1-explosion-direkt",
+     "settings": {
+      "Particles": true,
+      "Particle preset": "explosion",
+      "Particles: start video (seed)": false,
+      "Particles: direct look (no LTX, pro)": true
+     },
+     "gen": [
+      640,
+      512
+     ],
+     "win": [
+      0.8,
+      0.64
+     ],
+     "emitter": [
+      0.5,
+      0.62
+     ],
+     "prompt": null
+    },
+    {
      "id": "smolder",
      "name": "Smoldering ground",
      "text": "Embers glow in the ground where you click, painted into your clip.",
@@ -155,7 +235,7 @@
   {
    "id": "lightning",
    "name": "Lightning",
-   "text": "Electric arcs between two points or along an object",
+   "text": "Electric arcs between two points, strikes from the sky or along an object",
    "light_gain": 40.0,
    "light_albedo_exposure": 2.0,
    "light_color": "#b4c2ff",
@@ -207,6 +287,84 @@
       }
      },
      "prompt_tested": true
+    },
+    {
+     "id": "strike",
+     "name": "Strike from the sky",
+     "text": "A thunderstorm's strike onto the point you click: a faint leader, the flash, a few flickers in the same channel.",
+     "cost": "gen",
+     "variant": "app",
+     "placement": "window",
+     "gen": [
+      448,
+      768
+     ],
+     "win": [
+      0.5,
+      1.0
+     ],
+     "emitter": [
+      0.5,
+      0.94
+     ],
+     "ref": "strike-path",
+     "settings": {
+      "Particles": true,
+      "Particle preset": "lightning strike",
+      "Depth offset (+ = element nearer, less hidden)": 0.3
+     },
+     "prompt": {
+      "preset": "A single bright blue-white lightning bolt strikes down from the sky exactly along the guide line onto the ground: a jagged channel with thin forks branching downwards, it flashes and flickers a few times, then it is gone. Filmed on a pure black background, live-action, realistic, high detail.",
+      "what": "A single bright blue-white lightning bolt",
+      "what_plain": "A single lightning bolt",
+      "look": "a jagged channel with thin forks branching downwards",
+      "motion": "strikes down from the sky exactly along the guide line, flashes and flickers a few times, then it is gone",
+      "contact": "",
+      "chips": {
+       "look": [
+        "a jagged channel with thin forks branching downwards",
+        "a thick white-hot channel with a violet glow",
+        "hair-thin and crisp, many fine forks"
+       ],
+       "motion": [
+        "strikes down from the sky exactly along the guide line, flashes and flickers a few times, then it is gone",
+        "strikes again and again in short flashes"
+       ],
+       "contact": [
+        "it lights up {the %|the ground} where it hits",
+        "a burst of sparks and dust where it hits"
+       ]
+      }
+     },
+     "prompt_tested": false
+    },
+    {
+     "id": "strike_drawn",
+     "name": "Strike: particles only",
+     "text": "The same strike drawn by the particles alone, without an AI run.",
+     "cost": "calc",
+     "variant": "app",
+     "placement": "window",
+     "gen": [
+      448,
+      768
+     ],
+     "win": [
+      0.5,
+      1.0
+     ],
+     "emitter": [
+      0.5,
+      0.94
+     ],
+     "ref": "strike-path-direct",
+     "settings": {
+      "Particles": true,
+      "Particle preset": "lightning strike",
+      "Particles: start video (seed)": false,
+      "Particles: direct look (no LTX, pro)": true
+     },
+     "prompt": null
     },
     {
      "id": "climb",

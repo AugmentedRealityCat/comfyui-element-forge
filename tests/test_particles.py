@@ -110,7 +110,7 @@ check(rs["stats"]["landed"] == 1 and abs(yl - y_floor) < 6 and abs(rs["y"][-1, 0
       f"depth: a falling flake lands on the floor at its depth (y {yl:.0f} vs {y_floor:.0f}) and stays visible")
 
 over_b = dict(rate=0, burst=1, speed=0, speed_var=0, radius=0, turbulence=0, drag=0, life=6, inherit=0, gravity=900.0, depth_offset=0.3,
-              restitution=0.5, fade_out=0)
+              restitution=0.5, fade_out=0, fine_share=0.0, children=None)
 rbn, _, _ = run("sparks", over=over_b, a={"point_track_px": [[200, 40]] * 81}, depth=np.repeat(ramp[None], 81, 0), n=81)
 yy = rbn["y"][:, 0]
 check(2 <= rbn["stats"]["bounced"] <= 12 and np.nanmin(yy[40:]) > 60 and np.nanmax(yy) < np.interp(rbn["z"][0, 0], ramp[:, 0], np.arange(H)) + 6,
@@ -547,7 +547,8 @@ xl = rl["x"][N - 1][np.isfinite(rl["x"][N - 1])]
 check(pt.PRESETS["liquid"]["flock"] > 0 and np.std(xl) > 4.0,
       f"liquid: turbulence and flocking - the stream wanders (x spread {np.std(xl):.1f} px, was a straight line)")
 def start_speeds(var):
-    Pv = pt.params("sparks", {"speed_var": var, "gravity": 0.0, "drag": 0.0, "turbulence": 0.0, "spread": 0.0, "inherit": 0.0})
+    Pv = pt.params("sparks", {"speed_var": var, "gravity": 0.0, "drag": 0.0, "turbulence": 0.0, "spread": 0.0, "inherit": 0.0,
+                              "fine_share": 0.0, "children": None})
     emv = pt.Emitter("point A", 6, FPS, W, H, Pv, np.random.default_rng(1), a=[[200, 150]] * 6)
     rv = pt.simulate(Pv, emv, seed=1)
     a = np.isfinite(rv["x"][3]) & np.isfinite(rv["x"][2])

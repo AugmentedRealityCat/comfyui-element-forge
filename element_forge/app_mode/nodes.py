@@ -35,7 +35,7 @@ CRUMBLE = "Object crumbles under the effect (the dissolve is the plate)"
 CRUMBLE_STYLE = "Dissolve style (plain / fire (LTX) / gold dust)"
 CRUMBLE_DIR = "Dissolve direction (0 up, 90 right)"
 GUIDE_PRESETS = ["fire", "embers", "sparks", "grinding sparks", "smoke", "dust burst", "magic dust", "aura", "liquid", "debris",
-                 "snow", "rain", "fireflies", "lightning", "cracks", "frost", "lightning climb", "energy A-B"]
+                 "snow", "rain", "fireflies", "lightning", "cracks", "frost", "lightning climb", "lightning strike", "energy A-B", "explosion", "explosion side"]
 
 _FALLBACK_STYLES = [
     "fire/flame", "fire/burst", "lightning/between", "lightning/climb", "lightning/climb_arcs",
@@ -219,8 +219,8 @@ class EFAppEffect:
                     "tooltip": "At a point: the element's bottom edge stands on A, or its centre is on A."}),
                 "crumble": ("BOOLEAN", {"default": False,
                     "tooltip": "The clicked object falls apart into particles under the effect, the scene behind it appears."}),
-                "crumble_look": (["plain", "gold dust", "fire (LTX)"], {"default": "plain",
-                    "tooltip": "plain: pieces in the object's colours. gold dust: glowing pieces. fire (LTX): embers painted by the AI."}),
+                "crumble_look": (["plain", "gold dust", "fire (LTX)", "explodes"], {"default": "plain",
+                    "tooltip": "plain: pieces in the object's colours. gold dust: glowing pieces. fire (LTX): embers painted by the AI. explodes: it bursts from the centre at the start, the debris flies out and falls (with the Explosion style on top: debris and fireball)."}),
                 "crumble_direction": ("INT", {"default": 90, "min": 0, "max": 359,
                     "tooltip": "Which way the object crumbles (0 up, 90 right)."}),
             }

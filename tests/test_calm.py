@@ -40,11 +40,11 @@ def speeds(rec, lo, hi):
 
 
 base, _ = run("magic dust")
-same, _ = run("magic dust", {"spread_falloff": 0.0, "speed_end": 1.0, "max_speed": 0.0, "turb_fade": 0.0, "turb_drag": 0.0})
+same, _ = run("magic dust", {"spread_falloff": 0.0, "speed_end": 1.0, "max_speed": 0.0, "turb_fade": 0.3, "turb_drag": 0.0})
 check(all(np.array_equal(base[k], same[k], equal_nan=base[k].dtype.kind == "f") for k in base if isinstance(base[k], np.ndarray)),
       "all off: the same particles as the preset")
 
-calm = {"turbulence": 0.0, "gravity": 0.0, "drag": 0.0}
+calm = {"turbulence": 0.0, "gravity": 0.0, "drag": 0.0, "fine_share": 0.0, "children": None}
 r1, _ = run("sparks", {**calm, "speed_end": 1.0})
 r2, _ = run("sparks", {**calm, "speed_end": 0.2})
 s1, s2 = np.median(speeds(r1, 0.8, 1.0)), np.median(speeds(r2, 0.8, 1.0))

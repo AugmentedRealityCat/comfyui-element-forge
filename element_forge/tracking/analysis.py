@@ -158,6 +158,8 @@ class EFSaveAnalysis:
                                            "kept depth only if it asks for the same model."}),
                 "depth_edge": ("INT", {"default": DEPTH_EDGE, "min": 0, "max": 64, "tooltip": "The edge filter of EF Deflicker that "
                                        "made the depth: an analysis with another one counts as not done."}),
+                "depth_range": ("FLOAT", {"forceInput": True, "tooltip": "The shot's far / near (EF MoGe Normals), kept with the normals."}),
+                "fov": ("FLOAT", {"forceInput": True, "tooltip": "The camera's field of view (EF MoGe Normals), kept with the normals."}),
             },
         }
 
@@ -168,7 +170,7 @@ class EFSaveAnalysis:
     DESCRIPTION = ("Keeps the scene analysis of a clip in output/element-forge/clips/<clip>/ (depth and normals as 16 bit, "
                    "the camera's motion, MP4 previews). Later runs of the clip with the same frames take it from there.")
 
-    def save(self, clip, plate, fps, depth=None, normals=None, depth_model=None, depth_edge=DEPTH_EDGE):
+    def save(self, clip, plate, fps, depth=None, normals=None, depth_model=None, depth_edge=DEPTH_EDGE, depth_range=None, fov=None):
         d = clip_folder(clip, make=True)
         p = plate.detach().cpu().float().numpy()
         f, h, w = p.shape[:3]
@@ -188,6 +190,8 @@ class EFSaveAnalysis:
             info["range"]["normals"] = _save16(os.path.join(d, "normals.npy"), nor)
             _preview(os.path.join(d, "normals.mp4"), np.clip(nor, 0, 1), fps)
             info["parts"].append("normals")
+            if depth_range is not None and fov is not None:
+                info["scene"] = {"depth_range": float(depth_range), "fov": float(fov)}
         _write_json(os.path.join(d, "camera.json"), {"fps": float(fps), "frames": int(f), "motion": camera_motion(p)})
         info["parts"].append("camera")
         _write_json(os.path.join(d, "analysis.json"), info)
@@ -203,10 +207,14 @@ class EFLoadAnalysis:
             "frames": ("INT", {"default": 81, "min": 1, "max": 100000, "tooltip": "Frames of the run; the kept analysis must have exactly these."}),
         }}
 
-    RETURN_TYPES = ("IMAGE",)
+    RETURN_TYPES = ("IMAGE", "FLOAT", "FLOAT")
+    RETURN_NAMES = ("image", "depth_range", "fov")
+    OUTPUT_TOOLTIPS = ("The kept depth or normals.", "The shot's far / near as EF MoGe Normals measured it (2.0 for an analysis "
+                       "kept by an older version).", "The camera's field of view (65 for an analysis kept by an older version).")
     FUNCTION = "load"
     CATEGORY = "Element Forge"
-    DESCRIPTION = "Depth or normals of a clip from its kept analysis (EF Save Analysis), instead of computing them again."
+    DESCRIPTION = ("Depth or normals of a clip from its kept analysis (EF Save Analysis), instead of computing them again; "
+                   "with the normals also the shot's depth range and field of view (as EF MoGe Normals gives them).")
 
     @classmethod
     def IS_CHANGED(s, clip, part, frames):
@@ -221,7 +229,8 @@ class EFLoadAnalysis:
         a = _load16(os.path.join(clip_folder(clip), f"{part}.npy"), info["range"][part])
         if part == "depth":
             a = np.repeat(a, 3, axis=-1)
-        return (torch.from_numpy(np.ascontiguousarray(a)),)
+        sc = info.get("scene") or {"depth_range": 2.0, "fov": 65.0}
+        return (torch.from_numpy(np.ascontiguousarray(a)), float(sc["depth_range"]), float(sc["fov"]))
 
 
 def own_mask_hash(name):

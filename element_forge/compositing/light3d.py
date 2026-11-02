@@ -25,6 +25,13 @@ def pick_device(choice):
     return dev if isinstance(dev, torch.device) and dev.type in ("cuda", "xpu", "mps") else torch.device("cpu")
 
 
+def depth_to_z(d, depth_range, kind="linear"):
+    if kind == "disparity":
+        r = 1.0 / depth_range
+        return 1.0 / (r + d * (1.0 - r))
+    return 1.0 + (1.0 - d) * (depth_range - 1.0)
+
+
 def gaussian_blur(x, sigma):
     if sigma <= 0:
         return x
@@ -45,8 +52,8 @@ class EFDepthLight:
                 "layer_plate_linear": ("IMAGE", {"tooltip": "The placed element in plate space, linear (EF Place Element)."}),
                 "depth": ("IMAGE", {"tooltip": "Depth map, e.g. DA3 Render (min_max), ideally at the clip resolution (DA3 resolution = longer side). Normalized per clip."}),
                 "strength": ("FLOAT", {"default": 5.0, "min": 0.0, "max": 1000.0, "step": 0.05, "tooltip": "Brightness of the light: 1 = irradiance 1 at a distance of 0.1 scene units (nearest point = 1). Follows the flicker of the element."}),
-                "depth_range": ("FLOAT", {"default": 3.0, "min": 1.05, "max": 100.0, "step": 0.05, "tooltip": "How much further the farthest point is than the nearest one (far / near). Sets how strongly the light falls off into the depth."}),
-                "fov": ("FLOAT", {"default": 65.0, "min": 5.0, "max": 150.0, "step": 1.0, "tooltip": "Field of view of the camera along the longer image side (degrees). Phones: about 65-75."}),
+                "depth_range": ("FLOAT", {"default": 3.0, "min": 1.05, "max": 100.0, "step": 0.05, "tooltip": "How much further the farthest point is than the nearest one (far / near). Sets how strongly the light falls off into the depth. EF MoGe Normals measures it per clip (its depth_range output)."}),
+                "fov": ("FLOAT", {"default": 65.0, "min": 5.0, "max": 150.0, "step": 1.0, "tooltip": "Field of view of the camera along the longer image side (degrees). Phones: about 65-75. EF MoGe Normals measures it per clip (its fov output)."}),
                 "light_size": ("FLOAT", {"default": 0.15, "min": 0.001, "max": 1.0, "step": 0.005, "tooltip": "Size of the light source in scene units (nearest point = 1). Larger = softer falloff right next to it."}),
                 "wrap": ("FLOAT", {"default": 0.25, "min": 0.0, "max": 1.0, "step": 0.05, "tooltip": "Lets the light wrap a little around edges (rough surfaces, inaccurate normals). 0 = hard Lambert."}),
                 "shadows": ("BOOLEAN", {"default": True, "tooltip": "Screen-space shadows: surfaces hidden from the light by something in front get no light."}),
@@ -69,6 +76,7 @@ class EFDepthLight:
                 "normals_image": ("IMAGE", {"tooltip": "Normals from a normal estimator instead of the depth map, encoded OpenGL style (0.5 + 0.5 n: +X right, +Y up, +Z towards the camera), e.g. MoGe Render 'normal_opengl' (MoGe-2). Sharper shapes, flat floors stay flat, painted patterns do not become relief. Resized to the plate."}),
                 "normal_resolution": ("INT", {"default": 540, "min": 128, "max": 2048, "step": 2, "tooltip": "smooth surfaces: longer side in px at which normals are computed. Lower = smoother surfaces, higher = more shape detail (and more depth noise)."}),
                 "device": (["auto", "cpu"], {"default": "auto", "tooltip": "auto: computes frame by frame on ComfyUI's GPU (one frame at a time, a few hundred MB; falls back to the CPU if the GPU is full). cpu: always on the CPU. The result is the same up to float rounding."}),
+                "depth_kind": (["linear", "disparity"], {"default": "linear", "tooltip": "How the depth map is read. disparity: inverse depth (Video Depth Anything, DA3 min_max): the background is far behind and gets little light from a source in the front, as it should; distances count in the light's own distance from the camera, so a shot with something very near the lens is not darker. linear: the map is taken as linear depth (as in earlier versions)."}),
                 "add_element": ("BOOLEAN", {"default": True, "tooltip": "On: comp = plate + light + element. Off: comp = plate + light only, for a plate that already holds its glowing element (e.g. the finished dissolve lit by its own embers)."}),
             },
         }
@@ -84,7 +92,8 @@ class EFDepthLight:
     def light(self, plate, layer_plate_linear, depth, strength, depth_range, fov, light_size, wrap, shadows, max_light,
               saturation, track=None, light_offset=0.02, albedo=None, receiver=None, lights=6, color="", color_amount=1.0,
               surface_detail=0.5, element_depth=None, albedo_exposure=0.0, shadow_thickness=0.15,
-              normals="smooth surfaces", normal_resolution=540, normals_image=None, device="auto", add_element=True):
+              normals="smooth surfaces", normal_resolution=540, normals_image=None, device="auto", depth_kind="linear",
+              add_element=True):
         pl = plate[..., :3].float()
         ly = layer_plate_linear[..., :3].float()
         n = min(len(pl), len(ly))
@@ -138,7 +147,7 @@ class EFDepthLight:
             abi = ab_frame(i).to(dev)
             pli, lyi = pl[i].to(dev), ly[i].to(dev)
             d = gaussian_blur(dp[min(i, len(dp) - 1)].to(dev)[None, None], 1.0)[0, 0]
-            z = 1.0 + (1.0 - d) * (depth_range - 1.0)
+            z = depth_to_z(d, depth_range, depth_kind)
             P = torch.stack(((uu - cx) / f * z, (vv - cy) / f * z, z), -1)
             if normals_image is not None:
                 ni = normals_image[min(i, len(normals_image) - 1), ..., :3].float().to(dev)
@@ -213,11 +222,13 @@ class EFDepthLight:
                     zli = zl
                     if element_depth is not None:
                         edw = (float((ed_pp[r0 * g:r1 * g, c0 * g:c1 * g] * wgt).sum() / wsum) - d_lo) / (d_hi - d_lo)
-                        zli = 1.0 + (1.0 - edw) * (depth_range - 1.0) - light_offset
+                        zli = depth_to_z(edw, depth_range, depth_kind) - light_offset
                     Lp = torch.tensor([(ul - cxs) / f_s * zli, (vl - cys) / f_s * zli, zli], device=dev)
                     vec = Lp - P
                     dist2 = (vec * vec).sum(-1)
                     ldir = vec / dist2.sqrt()[..., None].clamp(min=1e-6)
+                    if depth_kind == "disparity":
+                        dist2 = dist2 / max(zli, 1e-3) ** 2
                     ndl = (((nrm * ldir).sum(-1) + wrap) / (1 + wrap)).clamp(min=0)
                     if shadows:
                         vis = self.visibility(Ps, Lp, zs, f_s, cxs, cys, thickness=shadow_thickness)

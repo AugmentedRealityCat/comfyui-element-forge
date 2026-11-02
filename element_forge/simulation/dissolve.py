@@ -38,6 +38,8 @@ DEFAULTS = {
     "grain": 0.04,
     "softness": 0.03,
     "density": 0.35,
+    "radial": 0.0,
+    "burst": 0.0,
     "push": 160.0,
     "lift": 70.0,
     "spread": 60.0,
@@ -67,7 +69,11 @@ DEFAULTS = {
     "fill_align": 0.0,
 }
 
-STYLES = {"plain": {}, "fire (LTX)": {"glow": 1.5, "tint": 0.7}, "gold dust": {"glow": 1.5, "tint": 0.7}}
+STYLES = {"plain": {}, "fire (LTX)": {"glow": 1.5, "tint": 0.7}, "gold dust": {"glow": 1.5, "tint": 0.7},
+          "explodes": {"glow": 0.8, "tint": 0.3, "radial": 1.0, "burst": 0.12, "push": 900.0, "lift": 250.0, "spread": 450.0,
+                       "gravity": 1400.0, "drag": 1.2, "turbulence": 40.0, "density": 0.3, "size": 3.0, "life": 1.6,
+                       "edge_noise": 0.7, "glow_width": 0.25, "softness": 0.1}}
+SPEED_KEYS = ("push", "lift", "spread", "turbulence", "gravity")
 
 
 def style_name(style):
@@ -127,6 +133,8 @@ class Field:
     def __init__(self, masks, direction_deg, start, duration, P, seed, fps=None):
         n, H, W = masks.shape
         self.H, self.W, self.start, self.dur, self.P, self.seed = H, W, start, max(duration, 1e-3), P, seed
+        if P.get("burst", 0) > 0:
+            self.dur = max(min(float(P["burst"]), self.dur), 1e-3)
         a = math.radians(direction_deg)
         self.d = np.array([math.sin(a), -math.cos(a)], np.float32)
         self.e = np.array([-self.d[1], self.d[0]], np.float32)
@@ -177,6 +185,9 @@ class Field:
     def _times(self, rx, ry):
         P = self.P
         u = (rx * self.d[0] + ry * self.d[1] - self.lo) / self.span
+        if P.get("radial", 0) > 0:
+            k = min(float(P["radial"]), 1.0)
+            u = (1 - k) * u + k * np.hypot(rx, ry) / max(0.5 * self.ext, 4.0)
         nz = P["edge_noise"]
         if nz > 0:
             f = 256.0 / max(P["noise_size"] * self.ext, 1.0)
@@ -433,8 +444,14 @@ def dissolve(plate, masks, direction_deg, start, duration, fps, seed=1, P=None, 
         if len(xs):
             ids = (i * H + ys).astype(np.int64) * W + xs
             r1, r2, r3, r4 = (hash_u(ids, seed=seed + j) for j in (21, 22, 23, 24))
-            nvx = (P["push"] * field.d[0] + P["spread"] * (2 * r1 - 1)) * s
-            nvy = (P["push"] * field.d[1] - P["lift"] + P["spread"] * (2 * r2 - 1)) * s
+            dx, dy = np.full(len(xs), field.d[0], np.float32), np.full(len(xs), field.d[1], np.float32)
+            if P.get("radial", 0) > 0:
+                k = min(float(P["radial"]), 1.0)
+                ox, oy = xs - field.c[i, 0], ys - field.c[i, 1]
+                ol = np.maximum(np.hypot(ox, oy), 1.0)
+                dx, dy = (1 - k) * dx + k * ox / ol, (1 - k) * dy + k * oy / ol
+            nvx = (P["push"] * dx + P["spread"] * (2 * r1 - 1)) * s
+            nvy = (P["push"] * dy - P["lift"] + P["spread"] * (2 * r2 - 1)) * s
             if flow is not None and P["inherit"] > 0 and n > 1:
                 fl = flow(i) if callable(flow) else flow[i]
                 nvx = nvx + P["inherit"] * fl[ys, xs, 0] * fps
@@ -529,6 +546,9 @@ def node_params(amount, speed, size, life, edge_noise, glow, glow_color, inherit
     if sty:
         P["glow"] = glow if glow > 0 else sty["glow"]
         P["tint"] = sty["tint"]
+        for k, v in sty.items():
+            if k not in ("glow", "tint"):
+                P[k] = v * speed if k in SPEED_KEYS else v * amount if k == "density" else v
     if extra.strip():
         P.update(json.loads(extra))
     P["density"] = min(1.0, P["density"])
@@ -580,7 +600,7 @@ class EFDissolve:
                 "motion_carry": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05, "tooltip": "How strongly moving things in the clip keep carrying the flying particles (optical flow of the plate): 0 off (only the motion at birth, inherit_motion), 1 they move with whatever moves under them. Still parts leave them to their physics."}),
                 "glow_color": ("STRING", {"default": "#ff8c26", "tooltip": "Colour of the glowing edge (and of tinted particles)."}),
                 "extra": ("STRING", {"default": "", "multiline": True, "tooltip": "Further settings as JSON, e.g. {\"tint\": 0.6, \"gravity\": -40, \"push\": 120}. The report lists all values."}),
-                "style": ("STRING", {"default": "plain", "tooltip": "plain, fire (LTX) or gold dust (short: fire, gold). plain: the values as set. fire (LTX): glowing edge 1.5 and particles tinted towards the glow colour; output ltx_embers is true, so the workflow lets LTX turn them into real embers. gold dust: the same glowing particles without LTX. A glowing edge > 0 here and a tint in extra win over the style."}),
+                "style": ("STRING", {"default": "plain", "tooltip": "plain, fire (LTX), gold dust or explodes (short: fire, gold, expl). plain: the values as set. fire (LTX): glowing edge 1.5 and particles tinted towards the glow colour; output ltx_embers is true, so the workflow lets LTX turn them into real embers. gold dust: the same glowing particles without LTX. A glowing edge > 0 here and a tint in extra win over the style."}),
             },
         }
 
@@ -716,6 +736,41 @@ class EFCleanPlateCrop:
         return (torch.from_numpy(np.ascontiguousarray(np.clip(out, 0, 1), np.float32)), w, h, info)
 
 
+def soft_uncrop(pl, cl, box, masks=None, soften=0.012, match=1.0):
+    x0, y0, x1, y1 = box
+    bw, bh = x1 - x0, y1 - y0
+    d = math.hypot(bw, bh)
+    g = max(1, int(round(soften * math.hypot(*pl.shape[1:3]))))
+    ker = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * g + 1, 2 * g + 1))
+    sig = max(4.0, 0.05 * d)
+    yy, xx = np.mgrid[0:bh, 0:bw]
+    border = np.minimum.reduce([xx, yy, bw - 1 - xx, bh - 1 - yy]).astype(np.float32)
+    rim = np.clip(border / max(2.0 * g, 1.0), 0, 1)
+    for i in range(len(pl)):
+        c = cv2.resize(cl[min(i, len(cl) - 1)], (bw, bh), interpolation=cv2.INTER_LANCZOS4)
+        if masks is None:
+            pl[i, y0:y1, x0:x1] = c
+            continue
+        m = np.asarray(masks[min(i, len(masks) - 1)], np.float32)
+        if m.shape != pl.shape[1:3]:
+            m = cv2.resize(m, (pl.shape[2], pl.shape[1]), interpolation=cv2.INTER_LINEAR)
+        hole = (m[y0:y1, x0:x1] > 0.5).astype(np.uint8)
+        if not hole.any():
+            continue
+        reg = pl[i, y0:y1, x0:x1]
+        grown = cv2.dilate(hole, ker)
+        if match > 0:
+            w = (1 - grown).astype(np.float32)
+            wb = cv2.GaussianBlur(w, (0, 0), sig)
+            diff = cv2.GaussianBlur((reg - c) * w[..., None], (0, 0), sig) / np.maximum(wb, 1e-3)[..., None]
+            far = np.clip(wb / 0.02, 0, 1)[..., None]
+            c = c + match * diff * far
+        a = cv2.GaussianBlur(grown.astype(np.float32), (0, 0), max(g / 2.0, 0.5))
+        a = np.maximum(a, hole) * rim
+        pl[i, y0:y1, x0:x1] = reg * (1 - a[..., None]) + c * a[..., None]
+    return pl
+
+
 class EFCleanPlateUncrop:
     @classmethod
     def INPUT_TYPES(s):
@@ -723,20 +778,30 @@ class EFCleanPlateUncrop:
             "plate": ("IMAGE", {"tooltip": "The clip (outside the box it stays as it is)."}),
             "clean": ("IMAGE", {"tooltip": "The clean plate of the crop (LTX output)."}),
             "crop_info": ("STRING", {"forceInput": True}),
+        }, "optional": {
+            "mask": ("MASK", {"tooltip": "The object's mask: only the hole is replaced, with a soft edge and the colours "
+                                         "matched to the plate around it. Without it the whole box is pasted."}),
+            "soften": ("FLOAT", {"default": 0.012, "min": 0.0, "max": 0.1, "step": 0.001,
+                                 "tooltip": "Width of the soft edge around the hole, share of the diagonal (with the mask)."}),
+            "match_color": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.05,
+                                      "tooltip": "How far the clean plate's colours are pulled to the plate's around the hole (with the mask)."}),
         }}
 
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("clean_plate",)
     FUNCTION = "uncrop"
     CATEGORY = "Element Forge"
-    DESCRIPTION = "Puts the clean plate of EF Clean Plate Crop back into the clip's frame (the plate around it)."
+    DESCRIPTION = ("Puts the clean plate of EF Clean Plate Crop back into the clip's frame (the plate around it). With the "
+                   "object's mask only the hole is replaced, softly and with the colours matched to the plate.")
 
-    def uncrop(self, plate, clean, crop_info):
+    def uncrop(self, plate, clean, crop_info, mask=None, soften=0.012, match_color=1.0):
         pl = _np(plate)[..., :3].copy()
         cl = _np(clean)[..., :3]
-        x0, y0, x1, y1 = json.loads(crop_info)["box"]
-        for i in range(len(pl)):
-            pl[i, y0:y1, x0:x1] = cv2.resize(cl[min(i, len(cl) - 1)], (x1 - x0, y1 - y0), interpolation=cv2.INTER_LANCZOS4)
+        mk = None
+        if mask is not None:
+            mk = _np(mask)
+            mk = mk.reshape(-1, *mk.shape[-2:])
+        soft_uncrop(pl, cl, tuple(int(v) for v in json.loads(crop_info)["box"]), mk, soften, match_color)
         return (torch.from_numpy(np.ascontiguousarray(np.clip(pl, 0, 1), np.float32)),)
 
 

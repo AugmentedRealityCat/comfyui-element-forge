@@ -39,10 +39,10 @@ Particle guidance can steer AI generation or create a finished drawn effect. Sta
 | EF Save Element / EF Load Element | Save and reload an element sequence with its manifest. |
 | EF Unmult | Recover colour and alpha from an element rendered on black or white. |
 | EF Glow | Create a glow and separate glow pass in linear light. |
-| EF Depth Light | Light the footage using scene depth, surface normals and the element's position. |
+| EF Depth Light | Light the footage using scene depth, surface normals and the element's position. *depth_kind* *disparity* reads Video Depth Anything's map as inverse depth; *depth_range* and *fov* can come from EF MoGe Normals. |
 | EF Deflicker | Reduce temporal variation in estimated passes. |
 | EF Dither | Reduce visible banding in low-bit-depth output. |
-| EF MoGe Normals | Estimate surface normals for lighting. |
+| EF MoGe Normals | Estimate surface normals for lighting, and the shot's depth range (far / near) and field of view for EF Depth Light. |
 
 ## Building blocks
 

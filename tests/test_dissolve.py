@@ -334,4 +334,27 @@ except ValueError as ex:
 check(sc_s < dv.BG_SMOOTH <= sc_l and d_s is False and d_l is True and d_set == (True, False, False) and bad_b,
       f"dissolve background: smooth {sc_s:.4f} -> filled without the AI, leaves {sc_l:.4f} -> clean plate; a set choice wins, "
       f"clean plate off always wins, an unknown name lists the choices")
+Pe, sty_e = dv.node_params(1.0, 1.0, 1.0, 1.0, 0.5, 0.0, "#ff8c26", 1.0, 0.0, "expl", "", "scene")
+check(sty_e == "explodes" and Pe["radial"] == 1.0 and Pe["burst"] == 0.12 and Pe["push"] == 900.0
+      and dv.node_params(1.0, 2.0, 1.0, 1.0, 0.5, 0.0, "#ff8c26", 1.0, 0.0, "explodes", "", "scene")[0]["push"] == 1800.0
+      and dv.node_params(1.0, 1.0, 1.0, 1.0, 0.5, 0.0, "#ff8c26", 1.0, 0.0, "plain", "", "scene")[0].get("radial", 0) == 0,
+      "explodes: the style brings radial and burst, its speeds follow the node's speed; plain stays as it was")
+ne = 24
+pex = np.repeat(bgimg[None], ne, 0).copy()
+mex = np.zeros((ne, H, W), np.float32)
+disk = (xx - 100) ** 2 + (yy - 60) ** 2 < 25 ** 2
+pex[:, disk] = (0.8, 0.8, 0.2)
+mex[:, disk] = 1.0
+Px = dict(Pe, edge_noise=0.0, grain=0.0)
+re_ = dv.dissolve(pex, mex, 90.0, 0.5, 1.5, fps, seed=4, P=Px)
+tx = re_["field"].times(10)
+check(tx[disk].max() <= 0.5 + 0.12 + 1e-3 and tx[60, 100] < tx[60, 122],
+      f"explodes: the whole object breaks within the burst ({tx[disk].max() - 0.5:.3f} s), the centre first")
+check(re_["dissolve_mask"][8][disk].min() > 0.99 and re_["person_matte"][8].max() < 1e-3,
+      "explodes: after the burst the object is gone")
+pa_ = re_["particles_alpha"][7]
+left, right, up_ = pa_[:, :70].sum(), pa_[:, 130:].sum(), pa_[:30].sum()
+rp = dv.dissolve(pex, mex, 90.0, 0.5, 1.5, fps, seed=4, P=dict(Px, radial=0.0))["particles_alpha"][7]
+check(left > 0.2 * right and right > 0.2 * left and up_ > 0 and rp[:, :70].sum() < 0.2 * rp[:, 130:].sum(),
+      f"explodes: the pieces fly out to every side (left {left:.0f}, right {right:.0f}); without radial they go with the direction")
 print(f"{ok} checks passed")

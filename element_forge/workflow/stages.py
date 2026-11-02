@@ -665,7 +665,7 @@ class EFForgeDissolve:
         return [
             ("amount", "Dissolve amount", NUM(-2, 1, 0.01), KEEP, "How much of the object goes. -2 = the style's.", False),
             ("glowing edge", "Dissolve glowing edge", NUM(-2, 5, 0.05), KEEP, "-2 = the style's.", False),
-            ("style", "Dissolve style (plain / fire (LTX) / gold dust)", [STYLE, "plain", "fire (LTX)", "gold dust"], STYLE, "How it goes.", False),
+            ("style", "Dissolve style (plain / fire (LTX) / gold dust)", [STYLE, "plain", "fire (LTX)", "gold dust", "explodes"], STYLE, "How it goes (explodes: it bursts from the centre at the start).", False),
             ("clean plate where never free", "Dissolve: clean plate (LTX) where never free", [STYLE, "on", "off"], STYLE, "LTX paints what was always hidden behind the object.", True),
             ("sharper clean plate", "Dissolve: clean plate sharper (crop around the object, test)", [STYLE, "on", "off"], STYLE, "", True),
             ("ember prompt", "Dissolve: ember prompt", ("STRING", {"multiline": True}), "", "fire: the embers' words. Empty = the style's.", True),

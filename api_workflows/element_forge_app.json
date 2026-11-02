@@ -5644,8 +5644,14 @@
     0
    ],
    "strength": 0.9,
-   "depth_range": 2.0,
-   "fov": 65.0,
+   "depth_range": [
+    "409",
+    1
+   ],
+   "fov": [
+    "409",
+    2
+   ],
    "light_size": 0.15,
    "wrap": 0.25,
    "shadows": true,
@@ -5667,7 +5673,8 @@
    "normals_image": [
     "409",
     0
-   ]
+   ],
+   "depth_kind": "disparity"
   },
   "_meta": {
    "title": "Light on the scene"
@@ -6855,8 +6862,14 @@
     0
    ],
    "strength": 0.9,
-   "depth_range": 2.0,
-   "fov": 65.0,
+   "depth_range": [
+    "409",
+    1
+   ],
+   "fov": [
+    "409",
+    2
+   ],
    "light_size": 0.15,
    "wrap": 0.25,
    "shadows": true,
@@ -6879,7 +6892,8 @@
     "409",
     0
    ],
-   "add_element": false
+   "add_element": false,
+   "depth_kind": "disparity"
   },
   "_meta": {
    "title": "Dissolve light on the scene"

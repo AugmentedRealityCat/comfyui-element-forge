@@ -22,6 +22,8 @@ BASE = dict(
     dof=0.0, focus=-1.0,
     bloom=1.0,
     rate=0.0, burst=0, burst_at=0.0, start=0.0, end=-1.0, preroll=0.0,
+    burst_every=0.0,
+    rate_curve=[],
     life=1.0, life_var=0.3,
     speed=100.0, speed_var=0.3, direction=0.0, spread=30.0, direction_mode="angle",
     lift=0.0,
@@ -52,6 +54,16 @@ BASE = dict(
     depth_guide="object", depth_edge=0.0,
     max_particles=20000, substeps=2,
     roughness=0.22, branches=3, reroll_frames=2, grow_seconds=0.0, width=2.0,
+    strike_leader=0.05,
+    strike_strokes=3,
+    strike_gap=0.06,
+    strike_decay=0.012,
+    strike_hold=0.0,
+    strike_hold_level=0.3,
+    strike_new_ground=0.0,
+    strike_streamer=0.0,
+    strike_lean=0.25,
+    strike_spread=0.0,
     climb_seconds=0.4,
     climb_from="bottom",
     climb_pitch=0.0,
@@ -90,59 +102,87 @@ BASE = dict(
     turb_fade=0.0,
     turb_drag=0.0,
     blob_life=0.0,
+    scale=1.0,
+    scene_height=0.0,
+    gravity_end=1.0,
+    speed_by_size=0.0,
+    sway=0.0,
+    sway_hz=0.7,
+    flicker_duty=0.0,
+    roll=0.0,
+    crack_angle=0.8,
+    crack_angle_var=0.3,
+    crack_pairs=0.0,
 )
 
 FIRE = [[0.0, [1.0, 0.95, 0.8]], [0.25, [1.0, 0.75, 0.3]], [0.55, [1.0, 0.4, 0.08]], [0.8, [0.6, 0.12, 0.03]],
         [1.0, [0.12, 0.1, 0.09]]]
 SPARK = [[0.0, [1.0, 1.0, 0.9]], [0.3, [1.0, 0.85, 0.45]], [0.7, [1.0, 0.5, 0.12]], [1.0, [0.7, 0.15, 0.03]]]
+BLAST = [[0.0, [1.0, 0.97, 0.85]], [0.12, [1.0, 0.78, 0.35]], [0.35, [1.0, 0.42, 0.08]], [0.6, [0.45, 0.14, 0.05]],
+         [1.0, [0.1, 0.09, 0.09]]]
+BLAST_SOOT = [[0.0, [1.0, 0.97, 0.85]], [0.08, [1.0, 0.78, 0.35]], [0.22, [1.0, 0.42, 0.08]], [0.4, [0.3, 0.11, 0.05]],
+              [0.7, [0.12, 0.1, 0.1]], [1.0, [0.08, 0.08, 0.08]]]
 
 STANDARD_INPAINT = "0.909375, 0.725, 0.421875, 0.0"
 STRONG_INPAINT = "0.9875, 0.975, 0.909375, 0.725, 0.421875, 0.0"
 PRESETS = {
-    "sparks": dict(rate=120.0, life=0.6, life_var=0.5, speed=700.0, speed_var=0.4, spread=70.0, inherit=0.6, size=1.6,
-                   size_end=0.4, fade_in=0.0, fade_out=0.4, gravity=1400.0, drag=0.6, turbulence=30.0, collide="bounce",
-                   restitution=0.35, sprite="spark", shutter=1.5, colors=SPARK, guide_style="lines"),
-    "grinding sparks": dict(rate=420.0, life=0.45, life_var=0.55, speed=900.0, speed_var=0.25, direction_mode="against motion",
+    "sparks": dict(rate=120.0, life=0.6, life_var=0.5, speed=1400.0, speed_var=0.4, spread=70.0, inherit=0.6, size=1.6,
+                   size_end=0.4, fade_in=0.0, fade_out=0.4, gravity=1400.0, drag=3.5, turbulence=30.0, collide="bounce",
+                   restitution=0.25, sprite="spark", shutter=0.75, fine_share=0.4, fine_size=0.5, fine_life=0.5,
+                   children=dict(at_age=0.4, chance=0.3, count=5, speed=600.0, spread=180.0, direction=0.0, life=0.08, size=0.6),
+                   colors=SPARK, guide_style="lines"),
+    "grinding sparks": dict(rate=420.0, life=0.45, life_var=0.55, speed=4000.0, speed_var=0.25, direction_mode="against motion",
                             lift=25.0, spread=25.0, inherit=0.3, size=2.0, size_end=0.5, fade_in=0.0, fade_out=0.35, gravity=900.0,
-                            drag=0.45, turbulence=0.0, collide="bounce", restitution=0.35, sprite="spark", shutter=2.5, glow=1.6,
+                            drag=6.0, turbulence=0.0, collide="bounce", restitution=0.25, sprite="spark", shutter=0.75, glow=1.6,
+                            fine_share=0.4, fine_size=0.5, fine_life=0.5,
                             colors=SPARK, guide_style="lines"),
+    "explosion": dict(rate=1400.0, rate_curve=[[0.0, 1.0], [0.04, 1.0], [0.12, 0.2], [0.3, 0.0]], burst=120, life=2.2,
+                      life_var=0.4, speed=1800.0, speed_var=0.6, spread=180.0, spread_falloff=0.0, inherit=0.2, radius=18.0,
+                      size=18.0, size_var=0.5, size_start=0.8, size_end=3.2, fade_in=0.0, fade_out=0.6, speed_end=1.0,
+                      gravity=-1500.0, gravity_end=0.3, roll=1500.0, drag=6.0, turbulence=80.0, turb_scale=70.0, turb_speed=1.0,
+                      sprite="puff", colors=BLAST_SOOT, flicker=0.2, flicker_hz=2.0, flicker_size=1.0, fine_share=0.3,
+                      fine_size=0.25, fine_speed=2.2, fine_life=0.5,
+                      blob=8.0, blob_life=0.45, blob_choke=0.3, blob_soft=0.15, blob_fill=0.0, guide_style="temperature"),
     "embers": dict(rate=25.0, life=2.5, life_var=0.4, speed=90.0, speed_var=0.5, spread=40.0, inherit=0.3, size=2.2,
-                   size_end=0.6, fade_in=0.1, fade_out=0.5, gravity=-60.0, drag=0.8, turbulence=70.0, turb_scale=120.0,
-                   sprite="soft", trail=6, colors=SPARK[1:], flicker=0.3, guide_style="lines"),
+                   size_end=0.6, fade_in=0.1, fade_out=0.5, gravity=-150.0, gravity_end=-1.33, drag=1.5, turbulence=70.0,
+                   turb_scale=120.0, sprite="soft", trail=6, colors=SPARK[1:], flicker=0.3, flicker_size=1.0, guide_style="lines"),
     "fire": dict(rate=110.0, life=0.8, life_var=0.3, speed=170.0, spread=16.0, inherit=0.5, radius=10.0, size=16.0,
                  size_var=0.3, size_end=0.2, fade_in=0.08, fade_out=0.55, gravity=-650.0, drag=0.35, turbulence=120.0,
                  turb_scale=55.0, turb_speed=1.2, sprite="puff", colors=FIRE, guide_style="temperature", flicker=0.25,
                  flicker_hz=4.0, flicker_size=1.0, fine_share=0.45, fine_size=0.4, fine_speed=1.8, fine_life=0.6,
                  blob=6.0, blob_life=0.5, blob_choke=0.3, blob_soft=0.15, blob_fill=0.0),
-    "smoke": dict(look="over", ambient=1.0, rate=40.0, life=3.0, speed=130.0, speed_var=0.4, spread=20.0, inherit=0.3, radius=12.0, size=20.0,
+    "smoke": dict(look="over", ambient=1.0, rate=40.0, life=3.0, speed=130.0, speed_var=0.4, spread=12.0, spread_falloff=0.5,
+                  turb_fade=0.2, inherit=0.3, radius=12.0, size=20.0,
                   size_var=0.4, size_start=0.6, size_end=3.5, fade_in=0.15, fade_out=0.6, opacity=0.22, gravity=-130.0,
                   drag=0.7, turbulence=90.0, turb_scale=90.0, sprite="wisp", colors=[[0.0, [0.55, 0.55, 0.55]], [1.0, [0.4, 0.4, 0.42]]],
                   guide_style="volume", preroll=2.0),
     "dust burst": dict(look="over", ambient=1.0, burst=150, life=1.6, life_var=0.4, speed=260.0, speed_var=0.5, spread=85.0, inherit=0.4,
                        radius=14.0, size=13.0, size_var=0.5, size_start=0.5, size_end=2.5, fade_in=0.05, fade_out=0.7,
-                       opacity=0.6, gravity=120.0, drag=2.2, turbulence=40.0, turb_scale=120.0, sprite="wisp",
+                       opacity=0.6, gravity=60.0, drag=3.0, speed_end=0.3, turbulence=40.0, turb_scale=120.0, sprite="wisp",
                        colors=[[0.0, [0.62, 0.58, 0.52]], [1.0, [0.55, 0.52, 0.48]]], guide_style="volume"),
     "snow": dict(blend="contrast (rain)", rate=140.0, life=40.0, life_var=0.2, preroll=-1.0, speed=110.0, speed_var=0.3, direction=180.0, spread=15.0,
-                 inherit=0.0, band="top", size=3.5, size_var=0.5, fade_in=0.05, fade_out=0.05, turbulence=40.0,
-                 turb_scale=200.0, turb_speed=0.2, collide="stick", land_fade=2.5, sprite="flake",
+                 inherit=0.0, band="top", size=3.5, size_var=0.5, fade_in=0.05, fade_out=0.05, turbulence=60.0,
+                 turb_scale=80.0, turb_speed=0.3, sway=25.0, sway_hz=0.7, collide="stick", land_fade=2.5, sprite="flake",
                  colors=[[0.0, [0.95, 0.96, 1.0]], [1.0, [0.95, 0.96, 1.0]]], guide_style="volume"),
-    "rain": dict(blend="contrast (rain)", rate=900.0, life=3.0, life_var=0.1, preroll=-1.0, speed=1500.0, speed_var=0.15, direction=172.0,
+    "rain": dict(blend="contrast (rain)", rate=900.0, life=3.0, life_var=0.1, preroll=-1.0, speed=1500.0, speed_var=0.35,
+                 speed_by_size=0.5, direction=172.0,
                  spread=3.0, inherit=0.0, band="top", size=1.0, size_var=0.3, fade_in=0.02, fade_out=0.02, opacity=0.5,
-                 collide="die", children=dict(count=3, speed=160.0, spread=70.0, direction=0.0, life=0.25, size=1.2,
-                                              gravity=900.0, drag=0.0),
+                 collide="die", children=dict(count=3, speed=250.0, spread=70.0, direction=0.0, life=0.12, size=1.2,
+                                              gravity=2200.0, drag=0.0),
                  sprite="streak", shutter=1.0, colors=[[0.0, [0.75, 0.8, 0.85]], [1.0, [0.75, 0.8, 0.85]]],
                  guide_style="lines"),
-    "fireflies": dict(dof=15.0, rate=6.0, life=6.0, preroll=4.0, speed=25.0, direction_mode="random", inherit=0.0, size=3.0,
-                      fade_in=0.2, fade_out=0.2, flicker=0.6, flicker_hz=1.5, drag=0.5, turbulence=35.0,
+    "fireflies": dict(dof=15.0, rate=18.0, life=6.0, preroll=4.0, speed=25.0, direction_mode="random", inherit=0.0, size=3.0,
+                      fade_in=0.2, fade_out=0.2, flicker=1.0, flicker_hz=0.25, flicker_duty=0.15, drag=0.5, turbulence=35.0,
                       turb_scale=150.0, turb_speed=0.4, sprite="soft", glow=2.0,
                       colors=[[0.0, [0.9, 1.0, 0.35]], [1.0, [0.9, 1.0, 0.35]]], guide_style="volume"),
     "magic dust": dict(rate=160.0, life=1.2, life_var=0.4, speed=60.0, direction_mode="outward", spread=25.0,
-                       inherit=0.8, size=2.2, fade_in=0.2, fade_out=0.5, gravity=-40.0, turbulence=60.0,
-                       turb_scale=60.0, sprite="soft", trail=4, glow=1.5,
+                       inherit=0.8, size=2.2, fade_in=0.2, fade_out=0.5, gravity=-40.0, drag=1.0, turbulence=25.0,
+                       turb_scale=200.0, turb_fade=0.3, flicker=0.5, flicker_hz=8.0, flicker_size=1.0,
+                       sprite="soft", trail=4, glow=1.5,
                        colors=[[0.0, [0.75, 1.0, 1.0]], [1.0, [0.6, 0.35, 1.0]]], guide_style="lines"),
     "aura": dict(rate=160.0, life=1.2, life_var=0.4, speed=60.0, direction_mode="outward", spread=25.0,
-                 inherit=0.8, size=2.2, fade_in=0.2, fade_out=0.5, gravity=-40.0, turbulence=60.0,
-                 turb_scale=60.0, sprite="soft", trail=4, glow=1.5, depth_offset=-0.15, halo=1.0, shell=1.0,
+                 inherit=0.8, size=2.2, fade_in=0.2, fade_out=0.5, gravity=-40.0, drag=1.0, turbulence=25.0,
+                 turb_scale=200.0, turb_fade=0.3, sprite="soft", trail=4, glow=1.5, depth_offset=-0.15, halo=1.0, shell=1.0,
                  colors=[[0.0, [0.75, 1.0, 1.0]], [1.0, [0.6, 0.35, 1.0]]], guide_style="lines"),
     "liquid": dict(look="over", rate=220.0, life=2.0, speed=120.0, speed_var=0.5, direction=180.0, spread=14.0, inherit=0.7,
                    radius=25.0, size=4.0, size_var=0.2, size_end=0.8, fade_in=0.02, fade_out=0.1, gravity=1600.0, drag=0.8,
@@ -153,15 +193,21 @@ PRESETS = {
                    opacity=0.8, guide_style="lines"),
     "lightning": dict(path="bolt", roughness=0.22, branches=3, reroll_frames=2, width=2.5, glow=2.0,
                       colors=[[0.0, [0.85, 0.92, 1.0]], [1.0, [0.85, 0.92, 1.0]]], guide_style="lines"),
+    "lightning strike": dict(path="strike", burst_at=0.3, roughness=0.08, fine_rough=0.3, branches=8, fork_depth=2,
+                             width=2.5, glow=2.2, strike_strokes=4, strike_gap=0.06, strike_decay=0.012, strike_hold=0.1,
+                             strike_hold_level=0.3, strike_new_ground=0.6, strike_streamer=30.0,
+                             colors=[[0.0, [0.88, 0.92, 1.0]], [1.0, [0.88, 0.92, 1.0]]], guide_style="lines"),
     "lightning climb": dict(path="climb", roughness=0.3, branches=4, reroll_frames=2, width=1.5, glow=1.2, climb_seconds=0.4,
                             climb_pitch=0.03, climb_rough=3.0, climb_head=0.8, climb_short=200.0,
                             fork_depth=2, fine_rough=0.28, climb_zigzag=5.0,
                             colors=[[0.0, [0.85, 0.92, 1.0]], [1.0, [0.85, 0.92, 1.0]]], guide_style="lines"),
     "cracks": dict(look="over", path="crack", crack_speed=300.0, crack_branch=0.06, crack_turn=0.1, crack_step=6.0,
+                   crack_angle=0.47, crack_angle_var=0.1,
                    crack_length=500.0, width=2.2, opacity=0.9, relief=1.0,
                    colors=[[0.0, [0.08, 0.07, 0.06]], [1.0, [0.08, 0.07, 0.06]]], guide_style="lines",
                    inpaint_sigmas=STRONG_INPAINT),
-    "frost": dict(look="over", path="crack", crack_speed=200.0, crack_branch=0.3, crack_turn=0.45, crack_step=4.0,
+    "frost": dict(look="over", path="crack", crack_speed=200.0, crack_branch=0.15, crack_turn=0.08, crack_step=6.0,
+                  crack_angle=1.05, crack_angle_var=0.05, crack_pairs=1.0,
                   crack_length=420.0, crack_seeds=5, width=1.4, opacity=0.85,
                   colors=[[0.0, [0.85, 0.93, 1.0]], [1.0, [0.7, 0.85, 1.0]]], guide_style="lines",
                   inpaint_sigmas=STRONG_INPAINT),
@@ -178,6 +224,7 @@ PRESETS = {
                    bloom=0.0, dof=12.0, focus=0.6,
                    max_particles=64, guide_style="volume"),
 }
+PRESETS["explosion side"] = dict(PRESETS["explosion"], spread=45.0, spread_falloff=0.3, direction=90.0, gravity=-900.0, roll=0.0)
 EMITTERS = ["point A", "line A-B", "drawing", "object mask", "object contour", "object bottom edge", "area", "whole frame", "groups"]
 OBJECT_EMITTERS = ("object mask", "object contour", "object bottom edge")
 LINE_ATTACH = ["track", "image", "object"]
@@ -659,7 +706,7 @@ class Emitter:
         return path[i0] * (1 - w) + path[i1] * w
 
     def sample(self, t, k, u=None):
-        i, ps = self.frame(t), min(self.W, self.H) / REF
+        i, ps = self.frame(t), min(self.W, self.H) / REF * float(self.P.get("scale", 1.0))
         u = self.rng.uniform(0, 1, (k, 5)) if u is None else np.asarray(u, np.float64)
         nrm = None
         if self.kind == "point A" or (self.kind == "line A-B" and self.b is None):
@@ -713,8 +760,40 @@ def sfac0(em):
     return 1.0
 
 
+RATE_CURVES = {"even": [], "explosion": [[0.0, 1.0], [0.04, 1.0], [0.12, 0.2], [0.3, 0.0]],
+               "pulses": [[0.0, 0.0], [0.08, 1.0], [0.2, 0.0], [0.4, 0.0], [0.48, 1.0], [0.6, 0.0], [0.8, 0.0], [0.88, 1.0],
+                          [1.0, 0.0]],
+               "grows": [[0.0, 0.0], [1.0, 1.0]], "dies down": [[0.0, 1.0], [1.0, 0.0]]}
+
+
+def rate_curve_at(curve, u):
+    if not curve:
+        return 1.0
+    pts = sorted((float(a), float(b)) for a, b in curve)
+    if u <= pts[0][0]:
+        return min(1.0, max(0.0, pts[0][1]))
+    for (a, va), (b, vb) in zip(pts, pts[1:]):
+        if u <= b:
+            k = 0.0 if b - a <= 1e-9 else (u - a) / (b - a)
+            return min(1.0, max(0.0, va + (vb - va) * k))
+    return min(1.0, max(0.0, pts[-1][1]))
+
+
+def burst_times(P, n, fps):
+    t = P["start"] + P["burst_at"]
+    end = P["end"] if P["end"] > 0 else (n - 1) / fps
+    if P.get("burst_every", 0.0) <= 0:
+        return [t]
+    out = []
+    while t <= end + 1e-9 and len(out) < 1000:
+        out.append(t)
+        t += P["burst_every"]
+    return out or [P["start"] + P["burst_at"]]
+
+
 def _capacity(P, duration):
-    k = P["rate"] * duration * 1.15 + P["burst"] + 16
+    every = P.get("burst_every", 0.0)
+    k = P["rate"] * duration * 1.15 + P["burst"] * (int(duration / every) + 1 if every > 0 else 1) + 16
     ch = P.get("children")
     if ch:
         k *= 1 + ch.get("count", 0)
@@ -758,7 +837,7 @@ def _dolly(P, cam, dep, n, W, H):
 
 
 LOOK_ONLY = ("size", "size_var", "fine_size", "size_start", "size_end", "opacity", "fade_in", "fade_out", "flicker",
-             "flicker_hz", "flicker_size")
+             "flicker_hz", "flicker_size", "flicker_duty")
 
 
 def _record_look(P, t, age, lt, land_t, size0, phase, sz, ps):
@@ -770,7 +849,14 @@ def _record_look(P, t, age, lt, land_t, size0, phase, sz, ps):
         hz = P["flicker_hz"]
         if P.get("flicker_size", 0) > 0:
             hz = hz * (P["size"] / np.maximum(size0, 1e-3)) ** (0.5 * P["flicker_size"])
-        al *= 1 - P["flicker"] * 0.5 * (1 + np.sin(2 * np.pi * hz * t + phase))
+        if P.get("flicker_duty", 0) > 0:
+            d = min(P["flicker_duty"], 1.0)
+            u = np.mod(hz * t + phase / (2 * np.pi), 1.0)
+            e = 0.1 * d
+            on = np.clip(np.minimum(u, d - u) / max(e, 1e-6) + 0.5, 0, 1)
+            al *= 1 - P["flicker"] * (1 - on)
+        else:
+            al *= 1 - P["flicker"] * 0.5 * (1 + np.sin(2 * np.pi * hz * t + phase))
     size = size0 * (P["size_start"] + (P["size_end"] - P["size_start"]) * age) * sz * ps
     return size, al
 
@@ -797,7 +883,7 @@ def relook(rec, P):
 def simulate(P, em, seed=0, amount=1.0, target=None, flow=None, look_state=False):
     n, fps, W, H, cam, dep = em.n, em.fps, em.W, em.H, em.cam, em.depth
     rng = np.random.default_rng(seed)
-    ps = min(W, H) / REF
+    ps = min(W, H) / REF * float(P.get("scale", 1.0))
     sub = max(1, int(P["substeps"]))
     dt = 1.0 / (fps * sub)
     pre = P["preroll"]
@@ -825,7 +911,7 @@ def simulate(P, em, seed=0, amount=1.0, target=None, flow=None, look_state=False
 
     max_alive = int(P["max_particles"])
     st = {k: np.zeros(cap) for k in ("x", "y", "z", "vx", "vy", "born", "life", "size0", "rot", "spin", "rnd", "phase",
-                                      "land_t", "grav", "drag", "px", "py", "rid", "foff", "sym5", "main", "fine")}
+                                      "land_t", "grav", "drag", "px", "py", "rid", "foff", "sym5", "main", "fine", "pop")}
     alive = np.zeros(cap, bool)
     landed = np.zeros(cap, bool)
     behind = np.zeros(cap, bool)
@@ -921,6 +1007,10 @@ def simulate(P, em, seed=0, amount=1.0, target=None, flow=None, look_state=False
         s5 = sym(5)
         st["size0"][idx] = src.get("size", 4.0) * (1 + src.get("size_var", 0.0) * s5)
         st["sym5"][idx], st["main"][idx], st["fine"][idx] = s5, src is P, 0.0
+        if src is P and P["speed_by_size"] > 0:
+            ks = np.maximum(1 + min(P["speed_by_size"], 1.0) * s5, 0.05)
+            st["vx"][idx] *= ks
+            st["vy"][idx] *= ks
         if src is P and P.get("fine_share", 0) > 0:
             fine = U(16) < P["fine_share"]
             st["fine"][idx] = fine
@@ -937,24 +1027,31 @@ def simulate(P, em, seed=0, amount=1.0, target=None, flow=None, look_state=False
         st["spin"][idx] = sym(7)
         st["rnd"][idx] = U(8)
         st["phase"][idx] = 2 * np.pi * U(9)
-        st["grav"][idx] = src.get("gravity", P["gravity"])
+        g = src.get("gravity", P["gravity"])
+        if P["scene_height"] > 0 and g > 0:
+            g = 9.81 * REF / P["scene_height"]
+        st["grav"][idx] = g
+        st["pop"][idx] = 0.0
         st["drag"][idx] = src.get("drag", P["drag"])
         alive[idx] = True
         landed[idx] = False
-        kind[idx] = 1 if (at is not None and ns == 2) else 0
+        kind[idx] = 1 if (at is not None and ns in (2, 4)) else 0
         fi = em.frame(t)
         sx, sy = cam.to_screen(wx, wy, fi)
         behind[idx] = (dep.at(fi, sx, sy) - st["z"][idx]) > 0.002 if dep else False
-        stats["children" if (at is not None and ns == 2) else "spawned"] += k
+        stats["children" if (at is not None and ns in (2, 4)) else "spawned"] += k
 
-    def children(h, t, z_front):
+    def children(h, t, z_front, ns=2):
         ch = P.get("children")
         c = int(ch.get("count", 0)) if ch else 0
         if c <= 0 or len(h) == 0:
             return
         at = np.repeat(np.stack([st["px"][h], st["py"][h]], 1), c, 0)
         ids = (np.repeat(st["rid"][h].astype(np.int64), c) * c + np.tile(np.arange(c), len(h)))
-        spawn(t, ids, 2, at=at, z_at=np.repeat(z_front, c), ch=ch)
+        spawn(t, ids, ns, at=at, z_at=np.repeat(z_front, c), ch=ch)
+
+    ch_age = float((P.get("children") or {}).get("at_age", 0.0) or 0.0)
+    ch_chance = float((P.get("children") or {}).get("chance", 1.0))
 
     if em.kind == "groups":
         gs = em.groups
@@ -979,8 +1076,11 @@ def simulate(P, em, seed=0, amount=1.0, target=None, flow=None, look_state=False
 
     acc = 0.0
     cid = 0
-    t_burst = P["start"] + P["burst_at"]
-    fired = False
+    t_bursts = burst_times(P, n, fps)
+    nb = 0
+    curve = P.get("rate_curve") or []
+    c_end = P["end"] if P["end"] > 0 else (n - 1) / fps
+    c_len = max(c_end - P["start"], 1e-6)
     rec_noise = None
     for s in range(steps):
         if s % 16 == 0:
@@ -988,7 +1088,7 @@ def simulate(P, em, seed=0, amount=1.0, target=None, flow=None, look_state=False
         t = (s - pre_steps) * dt
         fi = min(max(int(round(t * fps)), 0), n - 1)
         if t0 - 1e-9 <= t <= t_end and (em.contact is None or em.contact[fi]):
-            acc += rate_c * dt
+            acc += rate_c * dt * (rate_curve_at(curve, (t - P["start"]) / c_len) if curve else 1.0)
             kc = int(acc)
             acc -= kc
             groups = []
@@ -996,9 +1096,9 @@ def simulate(P, em, seed=0, amount=1.0, target=None, flow=None, look_state=False
                 ids = np.arange(cid, cid + kc)
                 cid += kc
                 groups.append((kept(ids, 0), 0))
-            if burst and not fired and t >= t_burst - 1e-9:
-                fired = True
-                ids = np.arange(burst_c)
+            while burst and nb < len(t_bursts) and t >= t_bursts[nb] - 1e-9:
+                ids = np.arange(nb * burst_c, (nb + 1) * burst_c)
+                nb += 1
                 groups.append((kept(ids, 1), 1))
             for ids, ns in groups:
                 if len(ids):
@@ -1054,7 +1154,19 @@ def simulate(P, em, seed=0, amount=1.0, target=None, flow=None, look_state=False
             x, y, z, vx, vy = (st[k][live] for k in ("x", "y", "z", "vx", "vy"))
             st["px"][live], st["py"][live] = x, y
             ax = np.full(len(live), P["wind"][0], np.float64) - st["drag"][live] * vx
-            ay = st["grav"][live] + P["wind"][1] - st["drag"][live] * vy
+            g = st["grav"][live]
+            if P["gravity_end"] != 1.0:
+                g = g * (1 + (P["gravity_end"] - 1) * np.clip((t - st["born"][live]) / st["life"][live], 0, 1))
+            ay = g + P["wind"][1] - st["drag"][live] * vy
+            if P["roll"] and len(live) > 2:
+                cxr, cyr = float(x.mean()), float(y.mean())
+                r = max(float(np.std(x)) * 0.8, 10.0 * ps)
+                side = np.where(x >= cxr, 1.0, -1.0)
+                rx, ry = x - (cxr + side * r), y - cyr
+                rl = np.maximum(np.hypot(rx, ry), 1e-6)
+                wr = np.minimum(1.0, rl / (0.3 * r)) * np.exp(-np.maximum(rl - r, 0.0) / r)
+                ax += P["roll"] * wr * side * -ry / rl
+                ay += P["roll"] * wr * side * rx / rl
             if P["vortex"] or P["attract"]:
                 cx, cy = cam.to_world(em.center[fi, 0], em.center[fi, 1], fi)
                 if P["vortex"]:
@@ -1114,6 +1226,18 @@ def simulate(P, em, seed=0, amount=1.0, target=None, flow=None, look_state=False
             st["vx"][live], st["vy"][live] = nvx, nvy
             st["x"][live] = x + (0.5 * (vx + nvx) + fx) * dt * sz * ps
             st["y"][live] = y + (0.5 * (vy + nvy) + fy) * dt * sz * ps
+            if P["sway"] > 0:
+                w = 2 * np.pi * P["sway_hz"] * (0.7 + 0.6 * st["rnd"][live])
+                ph = st["phase"][live]
+                st["x"][live] += P["sway"] * sz * ps * (np.sin(w * (t + dt) + ph) - np.sin(w * t + ph))
+            if ch_age > 0:
+                due = (st["pop"][live] == 0) & (kind[live] == 0) & ((t + dt - st["born"][live]) / st["life"][live] >= ch_age)
+                if due.any():
+                    h = live[due]
+                    st["pop"][h] = 1.0
+                    st["px"][h], st["py"][h] = st["x"][h], st["y"][h]
+                    go = hash_u(st["rid"][h].astype(np.int64), 4, 99, seed=seed) < ch_chance
+                    children(h[go], t + dt, st["z"][h[go]], 4)
             vx, vy = nvx, nvy
             st["rot"][live] += st["spin"][live] * dt * (2.0 if P["spin"] == SPIN else math.radians(P["spin"]))
             if dep and P["collide"] != "none":
@@ -1642,10 +1766,113 @@ def _zigzag(pts, rng, amp, ps):
     return s + nrm * off[:, None]
 
 
+def _down_forks(main, rng, nk, rough, depth, fine, val=0.8):
+    out = []
+    way = main[-1] - main[0]
+    H = float(np.hypot(*way))
+    base = math.atan2(way[1], way[0])
+    for _ in range(nk):
+        j = int(rng.integers(len(main) // 10, max(len(main) // 10 + 1, int(len(main) * 0.75))))
+        left = 1.0 - j / len(main)
+        ang = base + rng.choice([-1, 1]) * math.radians(rng.uniform(15, 45))
+        ln = H * left * rng.uniform(0.25, 0.6)
+        br = bolt_path(main[j], main[j] + ln * np.array([math.cos(ang), math.sin(ang)]), rng, rough * 1.1, 5, fine)
+        out.append((br, 0.5, np.linspace(val, 0.0, len(br)), 0.0))
+        if depth > 1 and rng.random() < 0.6:
+            for br2 in _down_forks(br, rng, int(rng.integers(1, 3)), rough, depth - 1, fine, val * 0.8):
+                out.append(br2)
+    return out
+
+
+def _strikes(P, em, seed, out, tgt, ps):
+    n, fps, H = em.n, em.fps, em.H
+    L, dec = max(P["strike_leader"], 1e-3), max(P["strike_decay"], 1e-3)
+    k3 = math.log(3.0) / dec
+    fine = P["fine_rough"] if P["fine_rough"] > 0 else None
+    for e, tb in enumerate(burst_times(P, n, fps)):
+        rng = np.random.default_rng(seed * 7919 + 104729 * (e + 1))
+        i0 = min(max(int(round(tb * fps)), 0), n - 1)
+        side = rng.uniform(-1.0, 1.0) * P["strike_spread"] * ps
+        gaps = [P["strike_gap"] * float(np.clip(math.exp(rng.normal(0.0, 0.6)), 0.15, 5.0))
+                for _ in range(max(0, int(P["strike_strokes"]) - 1))]
+        t_st = [tb] + list(tb + np.cumsum(gaps))
+        amp = [1.0] + [rng.uniform(0.55, 0.9) for _ in gaps]
+        hold_from = t_st[-2] if len(t_st) > 1 and P["strike_hold"] > 0 else None
+        flares = rng.uniform(0.0, max(P["strike_hold"], 1e-6), int(rng.integers(2, 5))) if hold_from is not None else []
+        new_ground = len(t_st) > 1 and rng.random() < P["strike_new_ground"]
+        t_last = t_st[-1] + 6 * dec + (P["strike_hold"] if hold_from is not None else 0.0)
+        chan = None
+        for i in range(max(0, int(math.floor((tb - L) * fps)) - 1), min(n, int(math.ceil(t_last * fps)) + 2)):
+            t = i / fps
+            lo = t - 1.0 / fps
+            if t < tb - L - 1e-9 or lo > t_last + 1e-9:
+                continue
+            if chan is None:
+                a = em.a[i0] + [side, 0.0]
+                b = tgt[i0] if tgt is not None else (em.b[i0] if em.b is not None else None)
+                if b is None or np.hypot(*(b - a)) < 2.0:
+                    top = -0.04 * H
+                    hgt = max(a[1] - top, 0.2 * H)
+                    b = np.array([a[0] + rng.choice([-1, 1]) * rng.uniform(0.3, 1.0) * P["strike_lean"] * hgt, a[1] - hgt])
+                main = bolt_path(b, a, rng, P["roughness"], 7, fine)
+                forks = _down_forks(main, rng, int(P["branches"]), P["roughness"], int(P["fork_depth"]), fine)
+                ln = np.concatenate([[0.0], np.cumsum(np.hypot(*np.diff(main, axis=0).T))])
+                second = main
+                if new_ground:
+                    j = int(len(main) * rng.uniform(0.3, 0.6))
+                    hh = float(np.hypot(*(main[-1] - main[0])))
+                    g2 = a + [rng.choice([-1, 1]) * rng.uniform(0.1, 0.3) * hh, 0.0]
+                    second = np.concatenate([main[:j], bolt_path(main[j], g2, rng, P["roughness"], 6, fine)[1:]])
+                up = None
+                if P["strike_streamer"] > 0:
+                    s_len = P["strike_streamer"] * ps
+                    up = bolt_path(a, a + [rng.uniform(-0.3, 0.3) * s_len, -s_len], rng, P["roughness"] * 2, 4, fine)
+                chan = (main, forks, ln / max(ln[-1], 1e-6), second, up)
+            main, forks, u, second, up = chan
+            w = P["width"] * ps
+            z = em.z[min(i, n - 1)]
+            if t < tb - 1e-9:
+                g = (t - (tb - L)) / L
+                keep = max(2, int(np.searchsorted(u, g)))
+                out[i].append((main[:keep], w * 0.45, np.full(keep, 0.3), z))
+                for br, bw, op, _ in forks:
+                    j = int(np.argmin(np.hypot(*(main - br[0]).T)))
+                    if j < keep:
+                        kk = max(2, int(len(br) * min(1.0, (keep - j) / max(len(main) * 0.25, 1.0))))
+                        out[i].append((br[:kk], w * 0.3, op[:kk] * 0.3, z))
+                if up is not None and t + 1.0 / fps >= tb - 1e-9:
+                    out[i].append((up, w * 0.4, np.linspace(0.45, 0.1, len(up)), z))
+                continue
+            light = [0.0] * len(t_st)
+            for k, (ts, am) in enumerate(zip(t_st, amp)):
+                if ts > t + 1e-9:
+                    continue
+                if ts > lo + 1e-9:
+                    light[k] = am
+                else:
+                    x0, x1 = lo - ts, t - ts
+                    light[k] = am * (math.exp(-k3 * x0) - math.exp(-k3 * x1)) / (k3 * (x1 - x0))
+            hold = 0.0
+            if hold_from is not None and hold_from <= t and lo <= hold_from + P["strike_hold"]:
+                hold = P["strike_hold_level"]
+                for f in flares:
+                    if lo <= hold_from + f <= t:
+                        hold = max(hold, min(1.0, P["strike_hold_level"] * 2.0))
+            first = light[0]
+            rest = max(light[1:] + [0.0])
+            for path_, val in ((main, max(first, hold if not new_ground else 0.0, rest if not new_ground else 0.0)),
+                               (second, max(rest, hold) if new_ground else 0.0)):
+                if val >= 0.04:
+                    out[i].append((path_, w * (0.6 + 0.4 * val), np.full(len(path_), min(1.0, val)), z))
+            if first > 0.04:
+                for br, bw, op, _ in forks:
+                    out[i].append((br, w * 0.5, op * first, z))
+
+
 def make_paths(P, em, seed, target=None):
     n, fps, W, H, cam = em.n, em.fps, em.W, em.H, em.cam
     em.crack_table = None
-    ps = min(W, H) / REF
+    ps = min(W, H) / REF * float(P.get("scale", 1.0))
     out = [[] for _ in range(n)]
     kind = P["path"]
     t0 = P["start"]
@@ -1675,6 +1902,8 @@ def make_paths(P, em, seed, target=None):
                 ln = L * rng.uniform(0.15, 0.35)
                 br = bolt_path(main[j], main[j] + ln * np.array([math.cos(ang), math.sin(ang)]), rng, P["roughness"] * 1.2, 5)
                 out[i].append((br, P["width"] * ps * 0.5, np.linspace(flick, 0.0, len(br)), em.z[i]))
+    elif kind == "strike":
+        _strikes(P, em, seed, out, tgt, ps)
     elif kind == "climb":
         if em.masks is None:
             raise ValueError("a climbing path needs the object mask (the thin parts it climbs): click the object in Position and track it")
@@ -1793,7 +2022,11 @@ def make_paths(P, em, seed, target=None):
             segs.append((x, y, nx, ny, born, wf, zi))
             tips.append((nx, ny, a2, ln + step * sc, g))
             if rng.uniform() < P["crack_branch"] and g < 3:
-                tips.append((nx, ny, a2 + rng.choice([-1, 1]) * rng.uniform(0.5, 1.1), ln + step * sc, g + 1))
+                sgn = rng.choice([-1, 1])
+                ang = P["crack_angle"] + P["crack_angle_var"] * (2 * rng.uniform() - 1)
+                tips.append((nx, ny, a2 + sgn * ang, ln + step * sc, g + 1))
+                if P["crack_pairs"] > 0 and rng.uniform() < P["crack_pairs"]:
+                    tips.append((nx, ny, a2 - sgn * ang, ln + step * sc, g + 1))
         segs = np.array(segs, np.float64).reshape(-1, 7)
         f0 = np.searchsorted(np.arange(n) / fps, segs[:, 4], side="left")
         keep = f0 < n
@@ -1945,7 +2178,7 @@ def render_frames(P, rec, em, paths, raster, style, premask=True, edge=0.08, edg
             coc = None
             if style == "seed" and P.get("dof", 0) > 0:
                 foc = P["focus"] if P.get("focus", -1) >= 0 else float(em.zref)
-                coc = P["dof"] * min(em.W, em.H) / REF * k * np.abs(rec["zd" if "zd" in rec else "z"][i, a] - foc)
+                coc = P["dof"] * min(em.W, em.H) / REF * P.get("scale", 1.0) * k * np.abs(rec["zd" if "zd" in rec else "z"][i, a] - foc)
                 if not own or wisp:
                     rs_e = np.sqrt(rs ** 2 + coc ** 2)
                     al = al * (rs / np.maximum(rs_e, 1e-6)) ** 2
@@ -1981,7 +2214,7 @@ def render_frames(P, rec, em, paths, raster, style, premask=True, edge=0.08, edg
         if stamp is not None:
             out[i] = stamp_sprites(out[i], sprite, *stamp[:6], tint=stamp[6], optical=optical, **(stamp[7] if len(stamp) > 7 else {}))
         if P.get("blob", 0) > 0:
-            out[i] = blob_merge(out[i], P["blob"] * min(em.W, em.H) / REF * raster.scale(i), P["blob_choke"], P["blob_soft"],
+            out[i] = blob_merge(out[i], P["blob"] * min(em.W, em.H) / REF * P.get("scale", 1.0) * raster.scale(i), P["blob_choke"], P["blob_soft"],
                                 P["opacity"], P["blob_fill"])
         if len(a) and free is not None and not own:
             v2 = free[0] > 1e-3

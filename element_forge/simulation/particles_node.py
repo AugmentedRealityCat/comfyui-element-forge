@@ -104,6 +104,7 @@ class EFParticleSettings:
                 "speed_variation": absval("Random spread of each particle's start speed: 0 = all equally fast, 0.5 = each between half and one and a half times the speed.", 1.0),
                 "preroll": ("FLOAT", {"default": -2.0, "min": -2.0, "max": 60.0, "step": 0.1, "tooltip": "Seconds the particles run before the clip starts, so the frame is already full at frame 0. -2 = as in the preset, -1 = auto (long enough to cross the frame), 0 = none."}),
                 "emitter": ("STRING", {"default": "", "tooltip": "The app's emitter panel: settings as JSON with their own value, e.g. {\"gravity\": 900}. They win over the preset, the settings above and the main controls of EF Particles."}),
+                "rate_over_time": (["preset"] + list(pt.RATE_CURVES), {"tooltip": "How many particles come when, over the emitter's time (start to end, or to the clip's end): the rate is the top. even: always the rate. explosion: nearly all at once, then it trails off. pulses: three bursts. grows / dies down. Own points in extra: {\"rate_curve\": [[0, 1], [0.1, 1], [0.3, 0]]} (time 0..1, share of the rate 0..1). The app's panel draws the same curve under Emission."}),
             },
         }
 
@@ -115,7 +116,7 @@ class EFParticleSettings:
 
     def make(self, gravity, turbulence, turbulence_size, drag, rate, fade_in, fade_out, depth_spread, collide, sprite,
              guide_style, trail, color, roughness, branches, extra, speed_variation=-1.0,
-             preroll=-2.0, emitter=""):
+             preroll=-2.0, emitter="", rate_over_time="preset"):
         o = {"gravity*": gravity, "turbulence*": turbulence, "turb_scale*": turbulence_size, "drag*": drag, "rate*": rate}
         o = {k: v for k, v in o.items() if v != 1.0}
         for k, v in (("fade_in", fade_in), ("fade_out", fade_out), ("depth_spread", depth_spread), ("roughness", roughness),
@@ -134,6 +135,8 @@ class EFParticleSettings:
         if color.strip():
             rgb = _hex_rgb(color)
             o["colors"] = [[0.0, rgb], [1.0, rgb]]
+        if rate_over_time != "preset":
+            o["rate_curve"] = pt.RATE_CURVES[rate_over_time]
         if extra.strip():
             o.update(json.loads(extra))
         if emitter.strip():
@@ -202,7 +205,7 @@ def setup(plate, preset, emitter, amount, speed, size, life, direction, spread, 
     em = pt.Emitter(emitter, n, fps, W, H, P, rng, a=track, b=track_b, masks=avoid,
                     drawing=_mask3(drawing) if drawing is not None else None, area=ar, depth=dep, cam=cam,
                     attach=line_attach, frames=pl if line_attach == "object" else None, memo=memo)
-    target = track_b if (P["attract"] or P["path"] == "bolt") else None
+    target = track_b if (P["attract"] or P["path"] in ("bolt", "strike")) else None
     flow = None
     if P["motion_carry"] > 0 and n > 1:
         flow = memo.get(("flow", n, H, W)) if memo is not None else None

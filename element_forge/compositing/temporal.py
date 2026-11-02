@@ -236,11 +236,41 @@ class EFMoGeNormals:
             "output": (["normal_opengl", "normal_directx"], {"default": "normal_opengl", "tooltip": "Normal-map convention (Depth Light expects OpenGL)."}),
         }}
 
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("normals",)
+    RETURN_TYPES = ("IMAGE", "FLOAT", "FLOAT")
+    RETURN_NAMES = ("normals", "depth_range", "fov")
+    OUTPUT_TOOLTIPS = ("The normal map per frame.",
+                       "How much further the far part of the shot is than the near part (far / near, 2nd and 98th percentile "
+                       "of MoGe-2's metric depth over the clip, sky left out): Depth Light's depth_range.",
+                       "The camera's field of view along the longer image side (degrees, median over the clip, recovered by "
+                       "MoGe-2): Depth Light's fov.")
     FUNCTION = "run"
     CATEGORY = "Element Forge"
-    DESCRIPTION = "MoGe-2 normals in one step (Run MoGe Inference + Render MoGe Geometry) without keeping the geometry on the GPU."
+    DESCRIPTION = ("MoGe-2 normals in one step (Run MoGe Inference + Render MoGe Geometry) without keeping the geometry on the "
+                   "GPU; also the shot's depth range and field of view for Depth Light.")
+
+    @staticmethod
+    def scene(depths, masks, intrinsics, w, h):
+        import numpy as np
+        vals = []
+        for d, m in zip(depths, masks):
+            d = d.float().cpu().numpy()
+            ok = np.isfinite(d) & (d > 0)
+            if m is not None:
+                ok &= m.cpu().numpy().astype(bool)
+            vals.append(d[ok])
+        v = np.concatenate(vals) if vals else np.zeros(0)
+        if len(v) < 16:
+            rng = 3.0
+        else:
+            near, far = np.percentile(v, 2), np.percentile(v, 98)
+            rng = float(np.clip(far / max(near, 1e-6), 1.05, 100.0))
+        fovs = []
+        for K in intrinsics:
+            K = K.float().cpu().numpy()
+            f = K[:, 0, 0] if w >= h else K[:, 1, 1]
+            fovs += list(np.degrees(2 * np.arctan(0.5 / np.maximum(f, 1e-6))))
+        fov = float(np.clip(np.median(fovs), 5.0, 150.0)) if fovs else 65.0
+        return round(rng, 3), round(fov, 2)
 
     def run(self, moge_model, image, resolution_level, batch_size, output):
         import comfy.model_management as mm
@@ -248,19 +278,27 @@ class EFMoGeNormals:
         import torch
         from comfy_extras.nodes_moge import MoGeInference, MoGeRender
         n, parts = image.shape[0], []
+        depths, masks, intr = [], [], []
         pbar = comfy.utils.ProgressBar(n)
         for i in range(0, n, batch_size):
             geo = MoGeInference.execute(moge_model=moge_model, image=image[i:i + batch_size], resolution_level=resolution_level,
                                         fov_x_degrees=0.0, batch_size=batch_size, force_projection=True, apply_mask=False,
                                         refine_steps=0).args[0]
             try:
+                if "depth" in geo:
+                    depths.append(geo["depth"][:, ::4, ::4].float().cpu())
+                    masks.append(geo["mask"][:, ::4, ::4].cpu() if "mask" in geo else None)
+                if "intrinsics" in geo:
+                    intr.append(geo["intrinsics"].float().cpu())
                 parts.append(MoGeRender.execute(moge_geometry=geo, output=output).args[0])
             finally:
                 geo.clear()
                 del geo
                 mm.soft_empty_cache()
             pbar.update_absolute(min(i + batch_size, n))
-        return (torch.cat(parts, dim=0),)
+        rng, fov = self.scene(depths, masks, intr, image.shape[2], image.shape[1])
+        print(f"[EF MoGe Normals] depth range {rng} (far / near), fov {fov} deg")
+        return (torch.cat(parts, dim=0), rng, fov)
 
 
 class EFClipFrames:

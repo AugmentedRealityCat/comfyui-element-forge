@@ -714,6 +714,8 @@ def use_kept(graph, settings):
     for nid, part in ((KEPT_DEPTH, "depth"), (KEPT_NORMALS, "normals")):
         if part == "depth" and AN.depth_model_of(info) != depth_model(graph):
             continue
+        if part == "normals" and info and "scene" not in info:
+            continue
         if info and part in info.get("parts", []) and part in info.get("range", {}):
             graph[nid] = {"class_type": "EFLoadAnalysis", "inputs": {"clip": w["clip"], "part": part, "frames": w["frames"]},
                           "_meta": {"title": f"Kept {part} of the clip"}}
@@ -778,7 +780,7 @@ def analysis_graph(values, ltx=None):
     def edit(g):
         g["analysis_keep"] = {"class_type": "EFSaveAnalysis", "inputs": {
             "clip": clip or g["101"]["inputs"]["file"], "plate": ["167", 0], "fps": ["167", 2], "depth": [KEPT_DEPTH, 0],
-            "normals": [KEPT_NORMALS, 0], "depth_model": depth_model(g),
+            "normals": [KEPT_NORMALS, 0], "depth_range": [KEPT_NORMALS, 1], "fov": [KEPT_NORMALS, 2], "depth_model": depth_model(g),
             "depth_edge": int(g.get(KEPT_DEPTH, {}).get("inputs", {}).get("edge_radius", AN.DEPTH_EDGE))},
             "_meta": {"title": "Keep the scene analysis"}}
     graph = upstream(build_graph("check", clip_values, "analysis", ltx=ltx, edit=edit, kept=False), ["analysis_keep"])
