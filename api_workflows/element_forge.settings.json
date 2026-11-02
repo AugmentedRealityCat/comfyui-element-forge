@@ -548,6 +548,10 @@
     "blend"
    ]
   ],
+  "Light strength (scene)": [
+   "410",
+   "strength"
+  ],
   "Dissolve: clean plate with the inpaint LoRA (soft edge; off = Clean Plate LoRA)": [
    "971",
    "value"

@@ -311,6 +311,7 @@
      "settings": {
       "Particles": true,
       "Particle preset": "lightning strike",
+      "Light strength (scene)": 6.0,
       "Depth offset (+ = element nearer, less hidden)": 0.3
      },
      "prompt": {
@@ -361,6 +362,7 @@
      "settings": {
       "Particles": true,
       "Particle preset": "lightning strike",
+      "Light strength (scene)": 6.0,
       "Particles: start video (seed)": false,
       "Particles: direct look (no LTX, pro)": true
      },

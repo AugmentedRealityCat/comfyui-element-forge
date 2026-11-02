@@ -213,7 +213,7 @@ After a run, these controls change the result at once, without a new run. A chan
 
 | Control | What it does |
 |:---|:---|
-| **Light on the scene** | Off, Low, Medium or High: the light the effect throws onto the clip. It falls off with the distance in the scene: a wall right behind the effect gets more than a background far away (the shot's depth range and field of view are measured from the clip). Needs a light pass; with Inpaint the light is already part of the picture. |
+| **Light on the scene** | Off, Low, Medium or High: the light the effect throws onto the clip. It falls off with the distance in the scene: a wall right behind the effect gets more than a background far away (the shot's depth range and field of view are measured from the clip). A lightning strike throws more light than its thin line suggests (**Light strength (scene)** 6 instead of 0.9 in the workflow). Needs a light pass; with Inpaint the light is already part of the picture. |
 | **Glow** | Soft glow around the bright parts of the effect. |
 | **Lit by the other effects** | The light of the other effects brightens this one where it falls, e.g. smoke near a flame. Shown with several effects. |
 | **Colour** | Original, a swatch, your own colour, or a colour taken from your clip (E). Tints the effect, its light and its glow. |
