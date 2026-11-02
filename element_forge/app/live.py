@@ -35,7 +35,7 @@ PASS = {"EFFreeVRAM": "images"}
 FALLBACK = {"track": ("198", 2), "window": ("198", 2), "track_b": ("199", 2)}
 SETUP_ARGS = ("plate", "preset", "emitter", "amount", "speed", "size", "life", "direction", "spread", "follow", "start_seconds",
               "fps", "seed", "track", "track_b", "mask", "drawing", "depth", "settings", "area", "depth_offset", "premask",
-              "edge_fade", "camera", "look_plate", "line_attach", "motion_carry", "screen_fixed")
+              "edge_fade", "camera", "look_plate", "line_attach", "motion_carry", "screen_fixed", "window")
 LOOK = {"colors", "color_var", "glow", "trail", "blob", "blob_choke", "blob_soft", "blob_fill", "blob_life", "plate_color", "dof", "focus",
         "bloom", "halo", "ambient", "relief", "shell", "look", "blend", "guide_style", "sprite", "sprite_gain", "sprite_aspect",
         "sprite_occlude", "sprite_play", "shutter", "depth_guide", "depth_edge"}

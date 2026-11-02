@@ -273,7 +273,7 @@ Element Forge has its own particle engine. It uses the clip's analysis, so parti
 | **Depth and contact** | Each particle has a depth in the scene. Nearer objects hide it, and where it meets a surface it can bounce, stick, slide or die. Rain and liquid drops splash on impact. |
 | **Look** | Sprites (soft, dot, flake, puff, wisp, streak, spark or chunk), colour and size over the particle's life, trails, motion blur, flicker and glow. **Merge into one body** blurs neighbouring particles together for liquid edges or fire tongues. |
 | **Paths** | Lightning is drawn as jagged, branching bolts that change shape every few frames, or as a strike from the sky that flashes at a burst and flickers in the same channel. Climbing arcs run along the thin parts of an object. Cracks and frost grow across a surface. |
-| **Dissolve** | The object's mask crumbles into particles while the background behind it is filled in, or bursts apart from its centre (*Explodes*). Any other effect can crumble its object too (**Crumble** in the emitter), so an explosion can blow up the object it sits on. |
+| **Dissolve** | The object's mask crumbles into particles while the background behind it is filled in (from other frames, the rest by LTX with a soft edge), or bursts apart from its centre (*Explodes*). Any other effect can crumble its object too (**Crumble** in the emitter), so an explosion can blow up the object it sits on. |
 | **Seed** | The same particle seed gives the same particles in the live preview and in the run. **New seed** tries other particles with the same settings. |
 
 </details>

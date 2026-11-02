@@ -68,4 +68,29 @@ check(all(len(a) == len(b) and all(np.array_equal(x[0], y[0]) for x, y in zip(a,
 for name in pt.PRESETS:
     pt.params(name, {"path": "strike", "burst_every": 0.5})
 check(True, "every preset takes the strike path and Burst every (one engine)")
+tall = pt.params("lightning strike", {"strike_new_ground": 1.0})
+tops, shared = [], []
+for seed in range(8):
+    e2 = pt.Emitter("point A", 20, FPS, 448, 768, tall, np.random.default_rng(1), a=(224, 722))
+    pp = pt.make_paths(tall, e2, seed)
+    i1 = int(round(tall["burst_at"] * FPS))
+    main = max(pp[i1], key=lambda x: x[1])[0]
+    tops.append(main[0][0])
+    late_ = [max(f, key=lambda x: x[1])[0] for f in pp[i1 + 2:] if f]
+    if late_:
+        sec = late_[0]
+        k = 0
+        while k < min(len(sec), len(main)) and np.allclose(sec[k], main[k]):
+            k += 1
+        shared.append(k / len(main))
+check(all(0.2 * 448 <= x <= 0.8 * 448 for x in tops), f"the channel starts inside the window ({[round(x) for x in tops]})")
+check(shared and min(shared) >= 0.5, f"a second ground point shares the upper channel ({[round(x, 2) for x in shared]})")
+inside = []
+for seed in range(8):
+    e3 = pt.Emitter("point A", 20, FPS, 1920, 1080, tall, np.random.default_rng(1), a=(1240, 1000))
+    e3.view = (np.full(20, 970.0), np.full(20, 1510.0))
+    pp = pt.make_paths(tall, e3, seed)
+    m3 = max(pp[int(round(tall["burst_at"] * FPS))], key=lambda x: x[1])[0]
+    inside.append(float(np.mean((m3[:, 0] >= 970) & (m3[:, 0] <= 1510))))
+check(min(inside) == 1.0, f"in a window of the plate the channel stays inside it ({[round(x, 2) for x in inside]})")
 print(f"{ok} checks passed")

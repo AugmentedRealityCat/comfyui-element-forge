@@ -357,4 +357,13 @@ left, right, up_ = pa_[:, :70].sum(), pa_[:, 130:].sum(), pa_[:30].sum()
 rp = dv.dissolve(pex, mex, 90.0, 0.5, 1.5, fps, seed=4, P=dict(Px, radial=0.0))["particles_alpha"][7]
 check(left > 0.2 * right and right > 0.2 * left and up_ > 0 and rp[:, :70].sum() < 0.2 * rp[:, 130:].sum(),
       f"explodes: the pieces fly out to every side (left {left:.0f}, right {right:.0f}); without radial they go with the direction")
+Hh, Ww = 400, 300
+gy, gx = np.mgrid[0:Hh, 0:Ww]
+smooth_bg = np.stack([0.08 + 0.05 * gx / Ww + 0.03 * gy / Hh] * 3, -1).astype(np.float32)
+wide = np.zeros((Hh, Ww), bool)
+wide[150:400, 90:210] = True
+pp, te = dv.pushpull_fill(smooth_bg, wide), dv.inpaint_f(smooth_bg, wide, 5)
+step = lambda x: float(np.abs(np.diff(x[300, 95:205, 0])).max())
+check(step(pp) < 0.3 * step(te) and np.abs(pp - smooth_bg)[wide].mean() < 0.01 and np.array_equal(pp[~wide], smooth_bg[~wide]),
+      f"wide hole: push-pull fill without a seam (largest step {step(pp):.5f}, TELEA {step(te):.5f}), the rest untouched")
 print(f"{ok} checks passed")

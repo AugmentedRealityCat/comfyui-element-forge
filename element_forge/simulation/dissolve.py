@@ -116,6 +116,24 @@ def lowfreq_offset(diff, w, sigma, eps=0.05):
     return (num + eps * glob) / (den + eps)
 
 
+def pushpull_fill(img, hole):
+    img = np.asarray(img, np.float32)
+    known = (~np.asarray(hole, bool)).astype(np.float32)
+    if known.sum() < 1:
+        return img
+    levels, I, Wt = [], img * known[..., None], known
+    while min(Wt.shape) > 8:
+        levels.append((I, Wt))
+        I, Wt = cv2.pyrDown(I), cv2.pyrDown(Wt)
+    cur = (I.reshape(-1, img.shape[-1]).sum(0) / max(float(Wt.sum()), 1e-6))[None, None] + 0 * I
+    cur = np.where(Wt[..., None] > 1e-3, I / np.maximum(Wt, 1e-6)[..., None], cur)
+    for I, Wt in reversed(levels):
+        up = cv2.resize(cur, (Wt.shape[1], Wt.shape[0]), interpolation=cv2.INTER_LINEAR)
+        a = np.clip(Wt, 0, 1)[..., None]
+        cur = a * (I / np.maximum(Wt, 1e-6)[..., None]) + (1 - a) * up
+    return np.where(known[..., None] > 0, img, cur).astype(np.float32)
+
+
 def inpaint_f(img, hole, radius):
     m = hole.astype(np.uint8) * 255 if hole.dtype != np.uint8 else hole
     out = []
@@ -286,7 +304,8 @@ class SceneFill:
             src_bad = hole | (self.free[i][y0:y1, x0:x1] == 0)
             if (~src_bad).sum() < 64:
                 src_bad = hole
-            crop[hole] = inpaint_f(crop, src_bad, 5)[hole]
+            big = hole.sum() > 0.002 * H * W
+            crop[hole] = (pushpull_fill(crop, src_bad) if big else inpaint_f(crop, src_bad, 5))[hole]
         out[y0:y1, x0:x1] = crop
         return out
 

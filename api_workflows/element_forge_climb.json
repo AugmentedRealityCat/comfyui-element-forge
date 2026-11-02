@@ -493,7 +493,7 @@
  "157": {
   "class_type": "PrimitiveStringMultiline",
   "inputs": {
-   "value": "The same shot without any people: only the empty background, natural light. Nobody is in the scene."
+   "value": "The empty background of this shot continues naturally, nothing stands in front of it. Nobody is there. Hands and surfaces that held something are empty now, nothing lies on them."
   },
   "_meta": {
    "title": "Dissolve: empty scene prompt"
@@ -6296,6 +6296,384 @@
    "title": "Clean plate sharper?"
   }
  },
+ "971": {
+  "class_type": "PrimitiveBoolean",
+  "inputs": {
+   "value": true
+  },
+  "_meta": {
+   "title": "Dissolve: clean plate with the inpaint LoRA (soft edge; off = Clean Plate LoRA)"
+  }
+ },
+ "972": {
+  "class_type": "PrimitiveInt",
+  "inputs": {
+   "value": 15
+  },
+  "_meta": {
+   "title": "Dissolve: inpaint mask grow (px)"
+  }
+ },
+ "973": {
+  "class_type": "EFCleanPlateCrop",
+  "inputs": {
+   "images": [
+    "169",
+    0
+   ],
+   "mask": [
+    "929",
+    0
+   ],
+   "padding": 0.08
+  },
+  "_meta": {
+   "title": "Inpaint crop (box around the object)"
+  }
+ },
+ "974": {
+  "class_type": "MaskToImage",
+  "inputs": {
+   "mask": [
+    "929",
+    0
+   ]
+  }
+ },
+ "975": {
+  "class_type": "EFCleanPlateCrop",
+  "inputs": {
+   "images": [
+    "974",
+    0
+   ],
+   "mask": [
+    "929",
+    0
+   ],
+   "padding": 0.08
+  },
+  "_meta": {
+   "title": "Inpaint crop of the mask"
+  }
+ },
+ "976": {
+  "class_type": "ImageToMask",
+  "inputs": {
+   "image": [
+    "975",
+    0
+   ],
+   "channel": "red"
+  }
+ },
+ "977": {
+  "class_type": "LTXVDilateVideoMask",
+  "inputs": {
+   "mask": [
+    "976",
+    0
+   ],
+   "spatial_radius": [
+    "972",
+    0
+   ],
+   "temporal_radius": 0
+  },
+  "_meta": {
+   "title": "Inpaint mask grown"
+  }
+ },
+ "978": {
+  "class_type": "LTXVInpaintPreprocess",
+  "inputs": {
+   "images": [
+    "973",
+    0
+   ],
+   "mask": [
+    "977",
+    0
+   ]
+  }
+ },
+ "979": {
+  "class_type": "LTXICLoRALoaderModelOnly",
+  "inputs": {
+   "model": [
+    "238",
+    0
+   ],
+   "lora_name": "ltx-2.3-22b-ic-lora-in-outpainting-0.9.safetensors",
+   "strength_model": 1.0
+  },
+  "_meta": {
+   "title": "Inpaint LoRA"
+  }
+ },
+ "980": {
+  "class_type": "StringConcatenate",
+  "inputs": {
+   "string_a": "pc game, console game, video game, cartoon, childish, ugly, person, people, figure, child, crumbs, food, debris, glowing light, glow",
+   "string_b": [
+    "109",
+    0
+   ],
+   "delimiter": ", "
+  }
+ },
+ "981": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "text": [
+    "980",
+    0
+   ],
+   "clip": [
+    "243",
+    0
+   ]
+  }
+ },
+ "982": {
+  "class_type": "LTXVConditioning",
+  "inputs": {
+   "frame_rate": [
+    "167",
+    2
+   ],
+   "positive": [
+    "421",
+    0
+   ],
+   "negative": [
+    "981",
+    0
+   ]
+  }
+ },
+ "983": {
+  "class_type": "EmptyLTXVLatentVideo",
+  "inputs": {
+   "width": [
+    "973",
+    1
+   ],
+   "height": [
+    "973",
+    2
+   ],
+   "length": [
+    "102",
+    0
+   ],
+   "batch_size": 1
+  }
+ },
+ "984": {
+  "class_type": "LTXAddVideoICLoRAGuide",
+  "inputs": {
+   "positive": [
+    "982",
+    0
+   ],
+   "negative": [
+    "982",
+    1
+   ],
+   "vae": [
+    "241",
+    0
+   ],
+   "latent": [
+    "983",
+    0
+   ],
+   "image": [
+    "978",
+    0
+   ],
+   "frame_idx": 0,
+   "strength": 1.0,
+   "latent_downscale_factor": [
+    "979",
+    1
+   ],
+   "crop": "disabled",
+   "use_tiled_encode": true,
+   "tile_size": 256,
+   "tile_overlap": 64,
+   "use_streaming": false,
+   "tile_frames": 97
+  }
+ },
+ "985": {
+  "class_type": "LTXVConcatAVLatent",
+  "inputs": {
+   "video_latent": [
+    "984",
+    2
+   ],
+   "audio_latent": [
+    "245",
+    0
+   ]
+  }
+ },
+ "986": {
+  "class_type": "CFGGuider",
+  "inputs": {
+   "cfg": 1.0,
+   "model": [
+    "979",
+    0
+   ],
+   "positive": [
+    "984",
+    0
+   ],
+   "negative": [
+    "984",
+    1
+   ]
+  }
+ },
+ "987": {
+  "class_type": "ManualSigmas",
+  "inputs": {
+   "sigmas": "1.0, 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0"
+  }
+ },
+ "988": {
+  "class_type": "SamplerCustomAdvanced",
+  "inputs": {
+   "noise": [
+    "246",
+    0
+   ],
+   "guider": [
+    "986",
+    0
+   ],
+   "sampler": [
+    "247",
+    0
+   ],
+   "sigmas": [
+    "987",
+    0
+   ],
+   "latent_image": [
+    "985",
+    0
+   ]
+  }
+ },
+ "989": {
+  "class_type": "LTXVSeparateAVLatent",
+  "inputs": {
+   "av_latent": [
+    "988",
+    0
+   ]
+  }
+ },
+ "990": {
+  "class_type": "LTXVCropGuides",
+  "inputs": {
+   "positive": [
+    "984",
+    0
+   ],
+   "negative": [
+    "984",
+    1
+   ],
+   "latent": [
+    "989",
+    0
+   ]
+  }
+ },
+ "991": {
+  "class_type": "VAEDecodeTiled",
+  "inputs": {
+   "samples": [
+    "990",
+    2
+   ],
+   "vae": [
+    "241",
+    0
+   ],
+   "tile_size": 512,
+   "overlap": 64,
+   "temporal_size": 64,
+   "temporal_overlap": 16
+  },
+  "_meta": {
+   "title": "Clean plate inpaint (LTX)"
+  }
+ },
+ "992": {
+  "class_type": "LTXVLaplacianPyramidBlend",
+  "inputs": {
+   "image_a": [
+    "991",
+    0
+   ],
+   "image_b": [
+    "973",
+    0
+   ],
+   "mask": [
+    "977",
+    0
+   ],
+   "trim_to_shortest": true,
+   "mask_low_res_dilation": 5
+  }
+ },
+ "993": {
+  "class_type": "EFCleanPlateUncrop",
+  "inputs": {
+   "plate": [
+    "169",
+    0
+   ],
+   "clean": [
+    "992",
+    0
+   ],
+   "crop_info": [
+    "973",
+    3
+   ]
+  },
+  "_meta": {
+   "title": "Inpaint crop back in the frame"
+  }
+ },
+ "994": {
+  "class_type": "ComfySwitchNode",
+  "inputs": {
+   "switch": [
+    "971",
+    0
+   ],
+   "on_false": [
+    "444",
+    0
+   ],
+   "on_true": [
+    "993",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "Clean plate with the inpaint LoRA?"
+  }
+ },
  "445": {
   "class_type": "EFDissolve",
   "inputs": {
@@ -6357,7 +6735,7 @@
   "class_type": "EFDissolve",
   "inputs": {
    "clean_plate": [
-    "444",
+    "994",
     0
    ],
    "plate": [
@@ -6892,8 +7270,8 @@
     "409",
     0
    ],
-   "add_element": false,
-   "depth_kind": "disparity"
+   "depth_kind": "disparity",
+   "add_element": false
   },
   "_meta": {
    "title": "Dissolve light on the scene"

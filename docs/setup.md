@@ -52,6 +52,7 @@ The gear at the top of the Element Forge app lists model status, size, destinati
 | `ltx-2.5-22b-ic-lora-alpha-gen-0.9.safetensors` | `loras` | [Alpha Gen](https://huggingface.co/Lightricks/LTX-2.5-22b-IC-LoRA-Alpha-Gen) |
 | `ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors` | `loras` | [Union Control](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control); the 2.5 workflow uses this 2.3 LoRA |
 | `ltx-2.5-22b-ic-lora-clean-plate-1.0.safetensors` | `loras` | [Clean Plate](https://huggingface.co/Lightricks/LTX-2.5-22b-IC-LoRA-Clean-Plate), used by Dissolve |
+| `ltx-2.3-22b-ic-lora-in-outpainting-0.9.safetensors` | `loras` | [In/Outpainting](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-In-Outpainting), Dissolve background with a soft edge (default) |
 
 After adding the models, open **Element Forge (app)** and follow [Your first effect](../README.md#your-first-effect).
 

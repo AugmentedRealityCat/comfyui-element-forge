@@ -668,6 +668,7 @@ class EFForgeDissolve:
             ("style", "Dissolve style (plain / fire (LTX) / gold dust)", [STYLE, "plain", "fire (LTX)", "gold dust", "explodes"], STYLE, "How it goes (explodes: it bursts from the centre at the start).", False),
             ("clean plate where never free", "Dissolve: clean plate (LTX) where never free", [STYLE, "on", "off"], STYLE, "LTX paints what was always hidden behind the object.", True),
             ("sharper clean plate", "Dissolve: clean plate sharper (crop around the object, test)", [STYLE, "on", "off"], STYLE, "", True),
+            ("inpaint clean plate", "Dissolve: clean plate with the inpaint LoRA (soft edge; off = Clean Plate LoRA)", [STYLE, "on", "off"], STYLE, "The In/Outpainting LoRA fills the box around the object, no hard edge.", True),
             ("ember prompt", "Dissolve: ember prompt", ("STRING", {"multiline": True}), "", "fire: the embers' words. Empty = the style's.", True),
             ("ember strength", "Dissolve: ember strength", NUM(-2, 5, 0.05), KEEP, "-2 = the style's.", True),
             ("embers away from the edge", "Dissolve: embers away from the edge", NUM(-2, 1, 0.01), KEEP, "-2 = the style's.", True),

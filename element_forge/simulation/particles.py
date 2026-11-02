@@ -1784,6 +1784,14 @@ def _down_forks(main, rng, nk, rough, depth, fine, val=0.8):
     return out
 
 
+def _view(em, i):
+    v = getattr(em, "view", None)
+    if v is None:
+        return 0.0, float(em.W)
+    j = min(i, len(v[0]) - 1)
+    return float(v[0][j]), float(v[1][j])
+
+
 def _strikes(P, em, seed, out, tgt, ps):
     n, fps, H = em.n, em.fps, em.H
     L, dec = max(P["strike_leader"], 1e-3), max(P["strike_decay"], 1e-3)
@@ -1814,14 +1822,28 @@ def _strikes(P, em, seed, out, tgt, ps):
                     top = -0.04 * H
                     hgt = max(a[1] - top, 0.2 * H)
                     b = np.array([a[0] + rng.choice([-1, 1]) * rng.uniform(0.3, 1.0) * P["strike_lean"] * hgt, a[1] - hgt])
-                main = bolt_path(b, a, rng, P["roughness"], 7, fine)
+                    x0, x1 = _view(em, i0)
+                    b[0] = float(np.clip(b[0], x0 + 0.25 * (x1 - x0), x0 + 0.75 * (x1 - x0)))
+                x0, x1 = _view(em, i0)
+                lo_x, hi_x = x0 + 0.03 * (x1 - x0), x1 - 0.03 * (x1 - x0)
+                best = None
+                for _ in range(8):
+                    cand = bolt_path(b, a, rng, P["roughness"], 7, fine)
+                    out_px = float(np.sum(np.maximum(lo_x - cand[:, 0], 0) + np.maximum(cand[:, 0] - hi_x, 0)))
+                    if best is None or out_px < best[0]:
+                        best = (out_px, cand)
+                    if out_px == 0:
+                        break
+                main = best[1]
                 forks = _down_forks(main, rng, int(P["branches"]), P["roughness"], int(P["fork_depth"]), fine)
                 ln = np.concatenate([[0.0], np.cumsum(np.hypot(*np.diff(main, axis=0).T))])
                 second = main
                 if new_ground:
-                    j = int(len(main) * rng.uniform(0.3, 0.6))
+                    j = int(len(main) * rng.uniform(0.55, 0.8))
                     hh = float(np.hypot(*(main[-1] - main[0])))
-                    g2 = a + [rng.choice([-1, 1]) * rng.uniform(0.1, 0.3) * hh, 0.0]
+                    g2 = a + [rng.choice([-1, 1]) * rng.uniform(0.06, 0.15) * hh, 0.0]
+                    x0, x1 = _view(em, i0)
+                    g2[0] = float(np.clip(g2[0], x0 + 0.05 * (x1 - x0), x0 + 0.95 * (x1 - x0)))
                     second = np.concatenate([main[:j], bolt_path(main[j], g2, rng, P["roughness"], 6, fine)[1:]])
                 up = None
                 if P["strike_streamer"] > 0:

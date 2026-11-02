@@ -40,7 +40,7 @@ class EFParticleDepthGuides:
 
     def run(self, depth, guide_content='selected object', object_shape='full object', edge_width=2, minimum_radius=1.5,
             depth_tolerance=0.01, window=None, **simulation):
-        sim = engine.setup(depth=depth, **simulation)
+        sim = engine.setup(depth=depth, window=window, **simulation)
         mask = simulation.get('mask')
         guide_mask = None if guide_content == 'full scene' or mask is None else engine._mask3(mask)
         out = make_guides(sim, engine._np(depth)[..., 0], guide_mask,

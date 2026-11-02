@@ -178,7 +178,7 @@ def params_for(preset, settings, speed, size, life, start_seconds, depth_offset=
 def setup(plate, preset, emitter, amount, speed, size, life, direction, spread, follow, start_seconds, fps, seed,
           track=None, track_b=None, mask=None, drawing=None, depth=None, settings=None, area="0.4, 0.4, 0.6, 0.6",
           depth_offset=0.0, premask=True, edge_fade=0.08, camera="follow the plate", look_plate=None, line_attach="track",
-          motion_carry=0.0, screen_fixed=False, cam=None, memo=None):
+          motion_carry=0.0, screen_fixed=False, cam=None, memo=None, window=None):
     if screen_fixed:
         camera = "fixed"
     if emitter == "whole frame":
@@ -205,6 +205,9 @@ def setup(plate, preset, emitter, amount, speed, size, life, direction, spread, 
     em = pt.Emitter(emitter, n, fps, W, H, P, rng, a=track, b=track_b, masks=avoid,
                     drawing=_mask3(drawing) if drawing is not None else None, area=ar, depth=dep, cam=cam,
                     attach=line_attach, frames=pl if line_attach == "object" else None, memo=memo)
+    if window is not None and "crop_origin_plate_px" in window:
+        r = pt.Raster(W, H, window)
+        em.view = (r.org[:, 0], r.org[:, 0] + r.w / np.maximum(r.sc, 1e-6))
     target = track_b if (P["attract"] or P["path"] in ("bolt", "strike")) else None
     flow = None
     if P["motion_carry"] > 0 and n > 1:
@@ -310,7 +313,7 @@ class EFParticles:
         t_0 = time.time()
         s = setup(plate, preset, emitter, amount, speed, size, life, direction, spread, follow, start_seconds, fps, seed,
                   track, track_b, mask, drawing, depth, settings, area, depth_offset, premask, edge_fade, camera, look_plate,
-                  line_attach, motion_carry, screen_fixed)
+                  line_attach, motion_carry, screen_fixed, window=window)
         pl, n, H, W, P, em, avoid, target, rec, paths = (s[k] for k in ("pl", "n", "H", "W", "P", "em", "avoid", "target", "rec", "paths"))
         premask, edge_fade = s["premask"], s["edge_fade"]
         t_sim = time.time() - t_0

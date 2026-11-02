@@ -102,7 +102,7 @@
    "input": "value",
    "label": "Empty scene (the shot without the object, in words)",
    "type": "text",
-   "default": "The same shot without any people: only the empty background, natural light. Nobody is in the scene."
+   "default": "The empty background of this shot continues naturally, nothing stands in front of it. Nobody is there. Hands and surfaces that held something are empty now, nothing lies on them."
   },
   {
    "node": "152",
@@ -110,6 +110,20 @@
    "label": "Clean plate sharper (crop around the object, test)",
    "type": "bool",
    "default": false
+  },
+  {
+   "node": "971",
+   "input": "value",
+   "label": "Clean plate with the inpaint LoRA (soft edge; off = Clean Plate LoRA)",
+   "type": "bool",
+   "default": true
+  },
+  {
+   "node": "972",
+   "input": "value",
+   "label": "Inpaint mask grow (px)",
+   "type": "int",
+   "default": 15
   },
   {
    "node": "154",

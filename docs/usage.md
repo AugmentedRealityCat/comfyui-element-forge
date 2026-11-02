@@ -256,7 +256,7 @@ Then **Run**. The result lands in the versions of the effect; see [Versions](#ve
 | Effect | Styles |
 |:---|:---|
 | **Fire** | Flame on the object · Short burst · Explosion · Explosion: particles only *(no AI)* · Smoldering ground ⚗ |
-| **Lightning** | Between two points · Strike from the sky ⚗ · Strike: particles only *(no AI)* · Climbs an object: fine filaments · Climbs an object: blue arcs ⚗ · Climbs an object: particles only *(no AI)* |
+| **Lightning** | Between two points · Strike from the sky · Strike: particles only *(no AI)* · Climbs an object: fine filaments · Climbs an object: blue arcs ⚗ · Climbs an object: particles only *(no AI)* |
 | **Sparks** | From a moving object ⚗ · Burst from a point |
 | **Smoke** | Rises from a point · Rises from a point: particles only *(no AI)* |
 | **Magic & energy** | Aura around a figure · Aura: particles only *(no AI)* · Energy between two points ⚗ · Energy ball |
@@ -267,6 +267,11 @@ Then **Run**. The result lands in the versions of the effect; see [Versions](#ve
 | **Your own effect** | At a point ⚗: describe any element yourself |
 
 - **Dissolve**<br>Runs its own graph. The clicked object, or a mask you paint, crumbles away while the background behind it is filled in (**Background**: auto, smooth or structured). *Gold dust* and *Burns away* light the scene from their glowing edge and particles; *Crumbles into particles* does not glow and writes no light.
+  <br>What the object hides in one frame and shows in another comes from those frames. Where it never moves away, LTX paints the
+  background: by default with the In/Outpainting LoRA (the box around the object, its mask grown by 15 pixels, blended
+  softly into the clip); switched off, with the Clean Plate LoRA. Works well for held objects, small figures and parts of an
+  object. Limits: the mask has to cover the whole object (what it leaves out, such as a stem or a sword's grip, is carried
+  on); shadows the object casts stay; a large, fast figure whose shadow stays on the wall can come back as another person.
 - **Climbs an object**<br>Runs its own graph. Click the thin object and give a word (*thin stick*, *staff*, *snake*). For all sticks of a crown, turn on **All alike**.
 
 ## Overlay or Inpaint
@@ -535,7 +540,7 @@ Open **Element Forge** from the same template list, or drag [Element Forge.json]
 | `fire/explosion_drawn` | Fire · Explosion: particles only | no AI |
 | `fire/smolder` | Fire · Smoldering ground | AI ⚗ |
 | `lightning/between` | Lightning · Between two points | AI |
-| `lightning/strike` | Lightning · Strike from the sky | AI ⚗ |
+| `lightning/strike` | Lightning · Strike from the sky | AI |
 | `lightning/strike_drawn` | Lightning · Strike: particles only | no AI |
 | `lightning/climb` | Lightning · Climbs an object: fine filaments | AI |
 | `lightning/climb_arcs` | Lightning · Climbs an object: blue arcs | AI ⚗ |
